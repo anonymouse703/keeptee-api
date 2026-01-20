@@ -58,7 +58,7 @@ class CreateUserCommand extends Command
 
         $data['role'] = select(
             label: 'Select user role',
-            options: [Role::class]
+            options: Role::array()
         );
 
         $data['phone'] = text(
@@ -105,8 +105,6 @@ class CreateUserCommand extends Command
         info("Email    : {$data['email']}");
         info("Role     : {$data['role']}");
         info("Phone    : {$data['phone']}");
-        info("Mobile   : {$data['mobile']}");
-        info("Address  : {$data['address']}");
         info("Password : {$rawPassword}");
         info('==============================');
 

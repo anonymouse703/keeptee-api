@@ -9,6 +9,6 @@ enum Role: string
     use EnumToArray;
 
     case Admin = 'admin';
-    case Provider = 'provider';
-    case Customer = 'customer';
+    case Agent = 'agent';
+    case Owner = 'owner';
 }
