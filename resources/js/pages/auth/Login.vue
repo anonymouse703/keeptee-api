@@ -1,24 +1,23 @@
 <script setup lang="ts">
-import { EnvelopeIcon, LockClosedIcon } from '@heroicons/vue/24/solid';
-import { useForm, Link } from '@inertiajs/vue3';
-import { GoogleIcon, FacebookIcon } from 'vue3-simple-icons';
+import { EnvelopeIcon, LockClosedIcon } from '@heroicons/vue/24/solid'
+import { useForm, Link } from '@inertiajs/vue3'
+import { GoogleIcon, FacebookIcon } from 'vue3-simple-icons'
 
+import BaseButton from '@/components/ui/button/BaseButton.vue'
+import BaseInput from '@/components/ui/input/BaseInput.vue'
+import AuthLayout from '@/layouts/AuthLayout.vue'
 
-
-import AuthLayout from '@/layouts/AuthLayout.vue';
-
-// Inertia form
 const form = useForm({
   email: '',
   password: '',
   remember: false,
-});
+})
 
 const submit = () => {
   form.post('/login', {
     onFinish: () => form.reset('password'),
-  });
-};
+  })
+}
 </script>
 
 <template>
@@ -37,15 +36,15 @@ const submit = () => {
           <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <EnvelopeIcon class="h-5 w-5 text-gray-400" />
           </div>
-          <input
+          <BaseInput
             id="email"
             type="email"
             v-model="form.email"
             required
             autofocus
-            autocomplete="email"
+          autocomplete="email"
             placeholder="you@example.com"
-            class="block w-full rounded-lg border border-gray-300 bg-white/50 pl-10 pr-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:border-gray-700 dark:bg-gray-800/50 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-400 transition-all duration-200"
+            class="pl-10"
           />
         </div>
         <p v-if="form.errors.email" class="text-sm text-red-600">{{ form.errors.email }}</p>
@@ -68,14 +67,14 @@ const submit = () => {
           <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <LockClosedIcon class="h-5 w-5 text-gray-400" />
           </div>
-          <input
+          <BaseInput
             id="password"
             type="password"
             v-model="form.password"
             required
             autocomplete="current-password"
             placeholder="••••••••"
-            class="block w-full rounded-lg border border-gray-300 bg-white/50 pl-10 pr-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:border-gray-700 dark:bg-gray-800/50 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-400 transition-all duration-200"
+            class="pl-10"
           />
         </div>
         <p v-if="form.errors.password" class="text-sm text-red-600">{{ form.errors.password }}</p>
@@ -95,14 +94,9 @@ const submit = () => {
       </div>
 
       <!-- Submit Button -->
-      <button
-        type="submit"
-        :disabled="form.processing"
-        class="relative w-full overflow-hidden rounded-xl bg-linear-to-r from-blue-600 to-emerald-600 px-6 py-4 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] transform transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <span class="relative z-10">Sign In</span>
-        <div class="absolute inset-0 bg-linear-to-r from-emerald-600 to-blue-600 opacity-0 hover:opacity-100 transition-opacity duration-300" />
-      </button>
+      <BaseButton type="submit" :disabled="form.processing">
+        Sign In
+      </BaseButton>
 
       <!-- Divider -->
       <div class="relative pt-4">
