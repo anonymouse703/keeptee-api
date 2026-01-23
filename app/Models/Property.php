@@ -3,6 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Property extends Model
 {
@@ -30,37 +34,37 @@ class Property extends Model
        Relationships
     ======================== */
 
-    public function owner()
+    public function owner() : BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function images()
+    public function images() : HasMany
     {
         return $this->hasMany(PropertyImage::class);
     }
 
-    public function primaryImage()
+    public function primaryImage() : HasOne
     {
         return $this->hasOne(PropertyImage::class)->where('is_primary', true);
     }
 
-    public function amenities()
+    public function amenities() : BelongsToMany
     {
         return $this->belongsToMany(Amenity::class);
     }
 
-    public function tags()
+    public function tags() : BelongsToMany
     {
         return $this->belongsToMany(Tag::class);
     }
 
-    public function inquiries()
+    public function inquiries() : HasMany
     {
         return $this->hasMany(PropertyInquiry::class);
     }
 
-    public function reviews()
+    public function reviews() : HasMany
     {
         return $this->hasMany(Review::class);
     }
