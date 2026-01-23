@@ -3,10 +3,9 @@
 namespace App\Http\Resources\Admin;
 
 use Illuminate\Http\Request;
-use App\Enums\EmailLog\Status;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class EmailLogResource extends JsonResource
+class TenantResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -17,10 +16,14 @@ class EmailLogResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'to_mail' => $this->to_mail,
-            'subject' => $this->subject,
-            'body' => $this->body,
-            'status' => Status::class
+            'name' => $this->name,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'lease_start' => $this->lease_start,
+            'lease_end' => $this->lease_end,
+
+            // RELATIONSHIPS
+            'property' => new PropertyResource($this->whenLoaded('property')),
         ];
     }
 }

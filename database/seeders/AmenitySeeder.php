@@ -10,15 +10,15 @@ class AmenitySeeder extends Seeder
     public function run(): void
     {
         $amenities = [
-            ['name' => 'WiFi', 'icon' => 'wifi'],
-            ['name' => 'Parking', 'icon' => 'parking'],
-            ['name' => 'Swimming Pool', 'icon' => 'pool'],
-            ['name' => 'Gym', 'icon' => 'gym'],
-            ['name' => 'Air Conditioning', 'icon' => 'ac'],
-            ['name' => 'Security', 'icon' => 'security'],
-            ['name' => 'Pet Friendly', 'icon' => 'pet'],
-            ['name' => 'Balcony', 'icon' => 'balcony'],
-            ['name' => 'Garden', 'icon' => 'garden'],
+            ['name' => 'WiFi'],
+            ['name' => 'Parking'],
+            ['name' => 'Swimming Pool'],
+            ['name' => 'Gym'],
+            ['name' => 'Air Conditioning'],
+            ['name' => 'Security'],
+            ['name' => 'Pet Friendly'],
+            ['name' => 'Balcony'],
+            ['name' => 'Garden'],
         ];
 
         foreach ($amenities as $amenity) {

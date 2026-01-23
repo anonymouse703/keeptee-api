@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Admin\ContactMessage;
+namespace App\Http\Requests\Admin\Lease;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreRequest extends FormRequest
+class UpdateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.

@@ -3,9 +3,10 @@
 namespace App\Http\Resources\Admin;
 
 use Illuminate\Http\Request;
+use App\Enums\Maintenance\Status;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ContactMessageResource extends JsonResource
+class MaintenanceResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,13 +17,14 @@ class ContactMessageResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'email' => $this->email,
-            'phone' => $this->phone,
-            'message' => $this->message,
+            'title' => $this->title,
+            'description' => $this->description,
+            'status' => Status::class,
+            'schedule_date' => $this->schedule_date,
 
-            // RELATIONSHIPS
+             // RELATIONSHIPS
             'property' => new PropertyResource($this->whenLoaded('property')),
+            'tenant' => new TenantResource($this->whenLoaded('tenant')),
         ];
     }
 }

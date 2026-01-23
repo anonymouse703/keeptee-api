@@ -5,7 +5,7 @@ namespace App\Http\Resources\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ContactMessageResource extends JsonResource
+class LeaseResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,13 +16,14 @@ class ContactMessageResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'email' => $this->email,
-            'phone' => $this->phone,
-            'message' => $this->message,
+            'monthly_rent' => $this->monthly_rent,
+            'start_date' => $this->start_date,
+            'end_date' => $this->end_date,
+            'status' => $this->status,
 
             // RELATIONSHIPS
             'property' => new PropertyResource($this->whenLoaded('property')),
+            'tenant' => new TenantResource($this->whenLoaded('tenant')),
         ];
     }
 }

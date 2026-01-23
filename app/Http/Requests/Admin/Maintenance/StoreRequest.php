@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Admin\EmailLog;
+namespace App\Http\Requests\Admin\Maintenance;
 
 use Illuminate\Foundation\Http\FormRequest;
 
