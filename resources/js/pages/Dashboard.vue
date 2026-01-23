@@ -14,13 +14,12 @@ import PropertyList from '@/components/dashboard/PropertyList.vue'
 import RevenueChart from '@/components/dashboard/RevenueChart.vue'
 import StatsCard from '@/components/dashboard/StatsCard.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { dashboard } from '@/routes'
 import { type BreadcrumbItem } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard().url,
+        href: '/dashboard',
     },
 ]
 

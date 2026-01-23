@@ -2,8 +2,6 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
 
-import { home } from '@/routes';
-
 const page = usePage()
 const name = page.props.name
 
@@ -52,7 +50,7 @@ defineProps<{
                     </div>
 
                     <div class="relative z-20">
-                        <Link :href="home()" class="group flex items-center text-lg font-semibold text-white">
+                        <Link :href="'/'" class="group flex items-center text-lg font-semibold text-white">
                             <div
                                 class="mr-3 rounded-lg bg-white/10 p-2 backdrop-blur-sm transition-all duration-300 group-hover:bg-white/20 group-hover:scale-105">
                                 <!-- <AppLogoIcon class="size-7 fill-current text-white" /> -->
@@ -139,7 +137,7 @@ defineProps<{
 
                         <!-- Mobile logo -->
                         <div class="mt-8 flex justify-center lg:hidden">
-                            <Link :href="home()" class="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
+                            <Link :href="'/'" class="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
                                 <img src="/logo1.png" alt="Logo" class="h-8 w-8" />
                                 <span class="text-lg font-semibold">{{ name }}</span>
                             </Link>

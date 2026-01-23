@@ -15,7 +15,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { logout } from '@/routes'
 import {
     edit as editAppearance
 } from '@/routes/appearance'
@@ -111,7 +110,7 @@ const handleLogout = () => {
                         >
                         <Link
                             class="flex items-center gap-2 w-full text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20 p-2.5 rounded"
-                            :href="logout()"
+                            :href="'/logout'"
                             @click="handleLogout"
                             as="button"
                             data-test="logout-button"

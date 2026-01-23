@@ -27,7 +27,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { dashboard } from '@/routes'
 import { type NavItem } from '@/types'
 
 
@@ -133,7 +132,7 @@ const supportNavItems: NavItem[] = [
                         as-child
                         class="group h-12 rounded-xl transition-all duration-300 hover:bg-linear-to-r hover:from-blue-500/10 hover:to-emerald-500/10 dark:hover:from-blue-500/5 dark:hover:to-emerald-500/5"
                     >
-                        <Link :href="dashboard()" class="flex items-center gap-3">
+                        <Link :href="'/dashboard'" class="flex items-center gap-3">
                             <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-emerald-500 shadow-lg group-hover:scale-105 transition-transform duration-300">
                                 <img src="/logo1.png" alt="Logo" class="h-12 w-12 rounded-lg p-2" />
                             </div>

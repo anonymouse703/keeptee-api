@@ -9,15 +9,11 @@ import DataTable from '@/components/ui/table/DataTable.vue'
 import Pagination from '@/components/ui/table/Pagination.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
-import TagActions from './partials/Actions.vue';
+import { type TagListItem } from '../../../types/type'
+
+import TagActions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
-interface Tag {
-    id: number
-    name: string
-    properties_count: number
-    created_at: string
-}
 
 interface PaginationMeta {
     current_page: number
@@ -34,7 +30,7 @@ interface PaginationMeta {
 
 const props = defineProps<{
     tags: {
-        data: Tag[]
+        data: TagListItem[]
         meta: PaginationMeta
     }
 }>()
@@ -43,7 +39,7 @@ const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
 
 const tags = computed(() => props.tags.data)
 
-const filteredTags = computed<Tag[]>(() => {
+const filteredTags = computed<TagListItem[]>(() => {
     if (!searchFilterRef.value) return tags.value
 
     const filters = searchFilterRef.value.filters
@@ -94,8 +90,8 @@ const filteredTags = computed<Tag[]>(() => {
 
 const columns = [
     { key: 'name', label: 'Tag Name' },
-    { key: 'properties_count', label: 'Properties' },
-    { key: 'created_at', label: 'Created Date' },
+    { key: 'color', label: 'Color' },
+    { key: 'is_active', label: 'Status' },
 ]
 
 const statusOptions = [
@@ -185,20 +181,30 @@ const handleReset = () => {}
             <!-- Data Table -->
             <DataTable :columns="columns" :data="props.tags.data">
                 <template #row-actions="{ item }">
-                <TagActions :item="item" />
+                    <TagActions :item="item" />
+                </template>
+                 
+                <template #cell-color="{ item }">
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="w-4 h-4 rounded-full border"
+                            :style="{ backgroundColor: item.color }"
+                        ></span>
+                        <span class="text-sm">{{ item.color }}</span>
+                    </div>
                 </template>
 
                 <template #cell-is_active="{ item }">
-                <span
-                    class="px-2 py-1 rounded text-xs"
-                    :class="item.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-                >
-                    {{ item.is_active ? 'Active' : 'Inactive' }}
-                </span>
+                    <span
+                        class="px-2 py-1 rounded text-xs"
+                        :class="item.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                    >
+                        {{ item.is_active ? 'Active' : 'Inactive' }}
+                    </span>
                 </template>
-
+                
                 <template #cell-created_at="{ item }">
-                {{ new Date(item.created_at).toLocaleDateString() }}
+                    {{ new Date(item.created_at).toLocaleDateString() }}
                 </template>
             </DataTable>
 

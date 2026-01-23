@@ -34,6 +34,10 @@ Route::middleware('auth', 'verified')->group(function () {
     })->name('dashboard');
 
     Route::resource('tags', Admin\TagController::class);
+    Route::controller(Admin\TagController::class)->group(function () {
+        Route::put('tags/{tag}/toggle-status', 'toggleStatus')
+            ->name('tags.toggle-status');
+    });
 });
 
 require __DIR__.'/settings.php';

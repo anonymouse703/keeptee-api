@@ -9,7 +9,8 @@ import {
     PointElement,
     CategoryScale,
     type ChartOptions,
-    type ChartData
+    type ChartData,
+    Filler
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 
@@ -20,7 +21,8 @@ ChartJS.register(
     LineElement,
     LinearScale,
     PointElement,
-    CategoryScale
+    CategoryScale,
+    Filler
 )
 
 interface Props {
