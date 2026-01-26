@@ -11,7 +11,7 @@ class StoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,12 @@ class StoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'lease_id'       => 'required|exists:leases,id',
+            'amount'         => 'required|numeric|min:0',
+            'due_date'       => 'required|date|after_or_equal:today',
+            'paid_at'        => 'nullable|date|after_or_equal:due_date',
+            'status'         => 'required|in:pending,paid,overdue',
+            'payment_method' => 'required|string|max:50',
         ];
     }
 }

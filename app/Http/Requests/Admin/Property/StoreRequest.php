@@ -11,7 +11,7 @@ class StoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,23 @@ class StoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'title'          => 'required|string|max:255',
+            'description'    => 'nullable|string',
+            'status'         => 'required|in:available,sold,rented',
+            'property_type'  => 'required|string|max:100',
+            'price'          => 'required|numeric|min:0',
+            'bedrooms'       => 'required|integer|min:0',
+            'bathrooms'      => 'required|integer|min:0',
+            'floor_area'     => 'required|numeric|min:0',
+            'address'        => 'required|string|max:500',
+            'city'           => 'required|string|max:100',
+            'state'          => 'nullable|string|max:100',
+            'country'        => 'required|string|max:100',
+            'latitude'       => 'nullable|numeric|between:-90,90',
+            'longitude'      => 'nullable|numeric|between:-180,180',
+            'owner_id'       => 'required|exists:users,id',
+            'is_featured'    => 'sometimes|boolean',
+            'is_active'      => 'sometimes|boolean',
         ];
     }
 }

@@ -22,7 +22,12 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'property_id'    => 'sometimes|exists:properties,id',
+            'tenant_id'      => 'sometimes|exists:tenants,id',
+            'title'          => 'sometimes|string|max:255',
+            'description'    => 'sometimes|string|nullable',
+            'status'         => 'sometimes|in:pending,confirmed,completed,cancelled',
+            'scheduled_date' => 'sometimes|date|after_or_equal:today',
         ];
     }
 }

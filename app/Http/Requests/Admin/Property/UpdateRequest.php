@@ -22,7 +22,23 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'title'          => 'sometimes|string|max:255',
+            'description'    => 'sometimes|string|nullable',
+            'status'         => 'sometimes|in:available,sold,rented',
+            'property_type'  => 'sometimes|string|max:100',
+            'price'          => 'sometimes|numeric|min:0',
+            'bedrooms'       => 'sometimes|integer|min:0',
+            'bathrooms'      => 'sometimes|integer|min:0',
+            'floor_area'     => 'sometimes|numeric|min:0',
+            'address'        => 'sometimes|string|max:500',
+            'city'           => 'sometimes|string|max:100',
+            'state'          => 'sometimes|string|max:100|nullable',
+            'country'        => 'sometimes|string|max:100',
+            'latitude'       => 'sometimes|numeric|between:-90,90',
+            'longitude'      => 'sometimes|numeric|between:-180,180',
+            'owner_id'       => 'sometimes|exists:users,id',
+            'is_featured'    => 'sometimes|boolean',
+            'is_active'      => 'sometimes|boolean',
         ];
     }
 }

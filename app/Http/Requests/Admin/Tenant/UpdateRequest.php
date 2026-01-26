@@ -11,7 +11,7 @@ class UpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,11 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'property_id' => 'sometimes|exists:properties,id',
+            'name'        => 'sometimes|string|max:255',
+            'phone'       => 'sometimes|string|max:20',
+            'lease_start' => 'sometimes|date|after_or_equal:today',
+            'lease_end'   => 'sometimes|date|after_or_equal:lease_start',
         ];
     }
 }

@@ -22,7 +22,12 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'property_id' => 'sometimes|exists:properties,id',
+            'tenant_id' => 'sometimes|exists:tenants,id',
+            'monthly_rent' => 'sometimes|numeric|min:0',
+            'start_date' => 'sometimes|date',
+            'end_date' => 'sometimes|date|after_or_equal:start_date',
+            'status' => 'sometimes|in:active,inactive,terminated',
         ];
     }
 }

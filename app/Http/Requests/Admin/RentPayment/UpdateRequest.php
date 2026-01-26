@@ -22,7 +22,12 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'lease_id'       => 'sometimes|exists:leases,id',
+            'amount'         => 'sometimes|numeric|min:0',
+            'due_date'       => 'sometimes|date|after_or_equal:today',
+            'paid_at'        => 'sometimes|date|after_or_equal:due_date|nullable',
+            'status'         => 'sometimes|in:pending,paid,overdue',
+            'payment_method' => 'sometimes|string|max:50',
         ];
     }
 }

@@ -11,7 +11,7 @@ class StoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,12 @@ class StoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'property_id' => 'required|exists:properties,id',
+            'tenant_id' => 'required|exists:tenants,id',
+            'monthly_rent' => 'required|numeric|min:0',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'required|in:active,inactive,terminated',
         ];
     }
 }
