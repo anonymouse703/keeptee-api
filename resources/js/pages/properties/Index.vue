@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
-import { Tag as TagIcon } from 'lucide-vue-next'
+import { HomeIcon } from 'lucide-vue-next'
 import { ref, computed } from 'vue'
 
 import { Badge } from '@/components/ui/badge'
@@ -9,58 +9,46 @@ import DataTable from '@/components/ui/table/DataTable.vue'
 import Pagination from '@/components/ui/table/Pagination.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
-import { type TagListItem } from '../../../types/type'
+import { type PropertyListItem, type PaginationMeta } from '../../../types/type'
 
 import TagActions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
 
-interface PaginationMeta {
-    current_page: number
-    last_page: number
-    links: {
-        url: string | null
-        label: string
-        active: boolean
-    }[]
-    total?: number
-    from?: number
-    to?: number
-}
 
 const props = defineProps<{
-    tags: {
-        data: TagListItem[]
+    properties: {
+        data: PropertyListItem[]
         meta: PaginationMeta
     }
 }>()
 
 const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
 
-const tags = computed(() => props.tags.data)
+const properties = computed(() => props.properties.data)
 
-const filteredTags = computed<TagListItem[]>(() => {
-    if (!searchFilterRef.value) return tags.value
+const filteredproperties = computed<PropertyListItem[]>(() => {
+    if (!searchFilterRef.value) return properties.value
 
     const filters = searchFilterRef.value.filters
-    let result = [...tags.value]
+    let result = [...properties.value]
 
     // Search
     if (filters.search) {
         const q = filters.search.toLowerCase()
         result = result.filter(tag =>
-            tag.name.toLowerCase().includes(q)
+            tag.title.toLowerCase().includes(q)
         )
     }
 
     // Sorting
     if (filters.sort) {
         switch (filters.sort) {
-            case 'name_asc':
-                result.sort((a, b) => a.name.localeCompare(b.name))
+            case 'title_asc':
+                result.sort((a, b) => a.title.localeCompare(b.title))
                 break
-            case 'name_desc':
-                result.sort((a, b) => b.name.localeCompare(a.name))
+            case 'title_desc':
+                result.sort((a, b) => b.title.localeCompare(a.title))
                 break
             case 'count_desc':
                 result.sort((a, b) => b.properties_count - a.properties_count)
@@ -89,8 +77,9 @@ const filteredTags = computed<TagListItem[]>(() => {
 })
 
 const columns = [
-    { key: 'name', label: 'Tag Name' },
-    { key: 'color', label: 'Color' },
+    { key: 'title', label: 'Property Title' },
+    { key: 'price', label: 'Price' },
+    { key: 'is_featured', label: 'Featured' },
     { key: 'is_active', label: 'Status' },
 ]
 
@@ -133,34 +122,34 @@ const handleReset = () => {}
                 <div class="space-y-2">
                     <div class="flex items-center gap-3">
                         <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-emerald-500">
-                            <TagIcon class="size-5 text-white" />
+                            <HomeIcon class="size-5 text-white" />
                         </div>
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
-                                Property Tags
+                                Property management
                             </h1>
                             <p class="text-gray-600 dark:text-gray-400">
-                                Organize and categorize your properties with tags
+                               A centralized system to organize and manage your properties.
                             </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <Badge variant="outline" class="text-xs">
-                            {{ props.tags.meta.total }} tags total
+                            {{ props.properties.meta.total }} properties total
                         </Badge>
                         <Badge
                             variant="outline"
                             class="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                         >
-                            {{ filteredTags.length }} displayed
+                            {{ filteredproperties.length }} displayed
                         </Badge>
                     </div>
                 </div>
 
                 <div class="shrink-0">
-                    <BaseButton @click="router.visit('/tags/create')">
-                        <TagIcon class="size-4" />
-                        Add New Tag
+                    <BaseButton @click="router.visit('/properties/create')">
+                        <HomeIcon class="size-4" />
+                        Add New Properties
                     </BaseButton>
                 </div>
             </div>
@@ -168,7 +157,7 @@ const handleReset = () => {}
             <!-- Search -->
             <SearchFilter
                 ref="searchFilterRef"
-                search-placeholder="Search tags..."
+                search-placeholder="Search properties..."
                 :status-options="statusOptions"
                 :sort-options="sortOptions"
                 :show-sort-dropdown="true"
@@ -179,7 +168,7 @@ const handleReset = () => {}
             />
 
             <!-- Data Table -->
-            <DataTable :columns="columns" :data="props.tags.data">
+            <DataTable :columns="columns" :data="props.properties.data">
                 <template #row-actions="{ item }">
                     <TagActions :item="item" />
                 </template>
@@ -192,6 +181,15 @@ const handleReset = () => {}
                         ></span>
                         <span class="text-sm">{{ item.color }}</span>
                     </div>
+                </template>
+
+                <template #cell-is_featured="{ item }">
+                    <span
+                        class="px-2 py-1 rounded text-xs"
+                        :class="item.is_featured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                    >
+                        {{ item.is_featured ? 'Featured' : 'Not Featured' }}
+                    </span>
                 </template>
 
                 <template #cell-is_active="{ item }">
@@ -210,7 +208,7 @@ const handleReset = () => {}
 
             <!-- Pagination -->
             <Pagination
-                :meta="props.tags.meta"
+                :meta="props.properties.meta"
                 @page-change="handlePageChange"
             />
         </div>

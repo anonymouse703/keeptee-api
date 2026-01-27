@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
 
-            $table->enum('status', ['for_sale', 'for_rent']);
+            $table->enum('status', ['for_sale', 'for_rent', 'sold', 'rented', 'available'])->default('available');
             $table->enum('property_type', [
                 'house', 'apartment', 'villa', 'townhouse',
                 'office', 'farmhouse', 'cabin', 'chalet'

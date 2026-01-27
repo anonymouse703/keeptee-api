@@ -5,7 +5,7 @@ namespace App\Services\PropertyImages;
 use App\Models\Property;
 use App\Models\PropertyImage;
 use Illuminate\Http\UploadedFile;
-use App\Services\ImageUploadService;
+use App\Services\Uploader\ImageUploadService;
 
 class PropertyImageService
 {

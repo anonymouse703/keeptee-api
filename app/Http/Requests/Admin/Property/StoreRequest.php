@@ -24,7 +24,7 @@ class StoreRequest extends FormRequest
         return [
             'title'          => 'required|string|max:255',
             'description'    => 'nullable|string',
-            'status'         => 'required|in:available,sold,rented',
+            'status'         => 'required|in:for_sale,for_rent,sold,rented,available',
             'property_type'  => 'required|string|max:100',
             'price'          => 'required|numeric|min:0',
             'bedrooms'       => 'required|integer|min:0',
@@ -36,7 +36,6 @@ class StoreRequest extends FormRequest
             'country'        => 'required|string|max:100',
             'latitude'       => 'nullable|numeric|between:-90,90',
             'longitude'      => 'nullable|numeric|between:-180,180',
-            'owner_id'       => 'required|exists:users,id',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
         ];

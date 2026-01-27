@@ -24,7 +24,7 @@ class UpdateRequest extends FormRequest
         return [
             'title'          => 'sometimes|string|max:255',
             'description'    => 'sometimes|string|nullable',
-            'status'         => 'sometimes|in:available,sold,rented',
+            'status'         => 'sometimes|in:for_sale,for_rent,sold,rented,available',
             'property_type'  => 'sometimes|string|max:100',
             'price'          => 'sometimes|numeric|min:0',
             'bedrooms'       => 'sometimes|integer|min:0',
@@ -36,7 +36,6 @@ class UpdateRequest extends FormRequest
             'country'        => 'sometimes|string|max:100',
             'latitude'       => 'sometimes|numeric|between:-90,90',
             'longitude'      => 'sometimes|numeric|between:-180,180',
-            'owner_id'       => 'sometimes|exists:users,id',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
         ];

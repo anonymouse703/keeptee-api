@@ -13,7 +13,12 @@ import {
     Calendar,
     MessageSquare,
     CreditCard,
-    Tags
+    Tags,
+    Users2Icon,
+    BookAIcon,
+    MessageCircleCode,
+    LucideLogs,
+    InboxIcon
 } from 'lucide-vue-next'
 
 import NavMain from '@/components/NavMain.vue'
@@ -30,53 +35,71 @@ import {
 import { type NavItem } from '@/types'
 
 
-// Real Estate Theme Navigation Items
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        // href: dashboard(),
         href: '/dashboard',
         icon: LayoutGrid,
     },
     {
         title: 'Properties',
-        href: '/properties.index',
+        href: '/properties',
         icon: Building2,
     },
     {
-        title: 'Listings',
-        href: '/listings.index',
-        icon: Home,
-    },
-    {
         title: 'Tenants',
-        href: '/tenants.index',
+        href: '/tenants',
         icon: Users,
     },
     {
-        title: 'Payments',
-        href: '/payments.index',
+        title: 'Amenities',
+        href: '/amenities',
+        icon: Home,
+    },
+    {
+        title: 'Rent Payments',
+        href: '/rent-payments',
         icon: CreditCard,
     },
     {
-        title: 'Invoices',
-        href: '/invoices.index',
-        icon: FileText,
-    },
-    {
         title: 'Leases',
-        href: '/leases.index',
+        href: '/leases',
         icon: FileText,
     },
     {
         title: 'Maintenance',
-        href: '/maintenance.index',
+        href: '/maintenances',
         icon: Settings,
+    },
+    {
+        title: 'Property Inquiries',
+        href: '/properties-inquiries',
+        icon: InboxIcon,
+    },
+    {
+        title: 'Email Logs',
+        href: '/email-logs',
+        icon: LucideLogs,
+    },
+    {
+        title: 'Contact Messages',
+        href: '/contact-messages',
+        icon: MessageCircleCode,
+    },
+    {
+        title: 'Reviews',
+        href: '/reviews',
+        icon: BookAIcon,
     },
     {
         title: 'Tags',
         href: '/tags',
         icon: Tags,
+    },
+    {
+        title: 'Users',
+        href: '/users',
+        icon: Users2Icon,
     },
 ]
 

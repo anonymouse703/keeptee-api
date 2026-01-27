@@ -7,8 +7,11 @@ use Inertia\Inertia;
 use App\Models\Property;
 use Illuminate\Http\Request;
 use App\Models\PropertyImage;
+use App\Enums\Property\Status;
 use Illuminate\Support\Facades\DB;
+use App\Enums\Property\PropertyType;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\Admin\PropertyResource;
 use App\Http\Requests\Admin\Property\StoreRequest;
 use App\Http\Requests\Admin\Property\UpdateRequest;
@@ -31,7 +34,10 @@ class PropertyController extends Controller
 
     public function create()
     {
-        return Inertia::render('tags/Create');
+        return Inertia::render('properties/Create', [
+            'property_types' => PropertyType::collection(),
+            'statuses' => Status::collection(),
+        ]);
     }
 
     public function store(StoreRequest $request, PropertyImageService $imageService)
@@ -41,6 +47,10 @@ class PropertyController extends Controller
         try {
             $property = new Property();
             $property->forceFill($request->validated());
+
+            $property->is_active = true;
+            $property->is_featured = true;
+            $property->owner_id = Auth::user()->id;
 
             $this->propertyRepository->save($property);
 
