@@ -16,18 +16,18 @@ class ReviewController extends Controller
 
     public function index()
     {
-        $inquiries = $this->reviewRepository->paginate();
+        $reviews = $this->reviewRepository->paginate();
 
-        return Inertia::render('properties-inquiries/Index', [
-            'properties' => ReviewResource::collection($inquiries),
+        return Inertia::render('reviews/Index', [
+            'reviews' => ReviewResource::collection($reviews),
         ]);
     }
 
 
     public function show(Review $review)
     {
-        return Inertia::render('properties-inquiries/Show', [
-            'property' => $review,
+        return Inertia::render('reviews/Show', [
+            'review' => $review,
         ]);
     }
 

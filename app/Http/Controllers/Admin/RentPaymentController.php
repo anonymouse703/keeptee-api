@@ -100,9 +100,14 @@ class RentPaymentController extends Controller
         return $this->updateStatus($rentalPayment, 'pending');
     }
 
-    public function setCompletedStatus(RentPayment $rentalPayment)
+    public function setPaidStatus(RentPayment $rentalPayment)
     {
-        return $this->updateStatus($rentalPayment, 'completed');
+        return $this->updateStatus($rentalPayment, 'paid');
+    }
+
+    public function setOverdueStatus(RentPayment $rentalPayment)
+    {
+        return $this->updateStatus($rentalPayment, 'overdue');
     }
 
     private function updateStatus(RentPayment $rentalPayment, string $status)

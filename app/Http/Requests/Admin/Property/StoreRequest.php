@@ -37,8 +37,8 @@ class StoreRequest extends FormRequest
             'latitude'       => 'nullable|numeric|between:-90,90',
             'longitude'      => 'nullable|numeric|between:-180,180',
             'owner_id'       => 'required|exists:users,id',
-            'is_featured'    => 'sometimes|boolean',
-            'is_active'      => 'sometimes|boolean',
+            'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
 }

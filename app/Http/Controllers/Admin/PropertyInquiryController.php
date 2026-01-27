@@ -35,13 +35,13 @@ class PropertyInquiryController extends Controller
     {
         return $this->updateStatus($inquiry, 'pending');
     }
-    public function setPaidStatus(PropertyInquiry $inquiry)
+    public function setApprovedStatus(PropertyInquiry $inquiry)
     {
-        return $this->updateStatus($inquiry, 'paid');
+        return $this->updateStatus($inquiry, 'approved');
     }
-    public function setOverdueStatus(PropertyInquiry $inquiry)       
+    public function setCancelledStatus(PropertyInquiry $inquiry)       
     {
-        return $this->updateStatus($inquiry, 'overdue');
+        return $this->updateStatus($inquiry, 'cancelled');
     }
 
     private function updateStatus(PropertyInquiry $inquiry, string $status)

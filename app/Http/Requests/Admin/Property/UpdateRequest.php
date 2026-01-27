@@ -37,8 +37,8 @@ class UpdateRequest extends FormRequest
             'latitude'       => 'sometimes|numeric|between:-90,90',
             'longitude'      => 'sometimes|numeric|between:-180,180',
             'owner_id'       => 'sometimes|exists:users,id',
-            'is_featured'    => 'sometimes|boolean',
-            'is_active'      => 'sometimes|boolean',
+            'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
 }

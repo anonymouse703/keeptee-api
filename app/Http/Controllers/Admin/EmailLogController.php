@@ -18,7 +18,7 @@ class EmailLogController extends Controller
     {
         $emailLogs = $this->emailLogRepository->paginate();
 
-        return Inertia::render('contact-messages/Index', [
+        return Inertia::render('email-logs/Index', [
             'emailLogs' => EmailLogResource::collection($emailLogs),
         ]);
     }
@@ -27,7 +27,7 @@ class EmailLogController extends Controller
     {
         $emailLog->load(['user']);
 
-        return Inertia::render('contact-messages/Show', [
+        return Inertia::render('email-logs/Show', [
             'emailLog' => $emailLog,
         ]);
     }

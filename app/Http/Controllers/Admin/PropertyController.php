@@ -6,10 +6,13 @@ use Exception;
 use Inertia\Inertia;
 use App\Models\Property;
 use Illuminate\Http\Request;
+use App\Models\PropertyImage;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\PropertyResource;
 use App\Http\Requests\Admin\Property\StoreRequest;
 use App\Http\Requests\Admin\Property\UpdateRequest;
+use App\Services\PropertyImages\PropertyImageService;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
 
 class PropertyController extends Controller
@@ -31,17 +34,26 @@ class PropertyController extends Controller
         return Inertia::render('tags/Create');
     }
 
-    public function store(StoreRequest $request)
+    public function store(StoreRequest $request, PropertyImageService $imageService)
     {
-        $payload = $request->validated();
-
-     $user = new Property();
-     $user->forceFill($payload);
+        DB::beginTransaction();
 
         try {
-            $this->propertyRepository->save($user);
-        } catch (Exception $exception) {
+            $property = new Property();
+            $property->forceFill($request->validated());
+
+            $this->propertyRepository->save($property);
+
+            if ($request->hasFile('images')) {
+                $imageService->store($property, $request->file('images'));
+            }
+
+            DB::commit();
+        } catch (\Exception $exception) {
+            DB::rollBack();
             report($exception);
+
+            return back()->withErrors(__('Failed to create property.'));
         }
 
         return redirect()
@@ -103,6 +115,20 @@ class PropertyController extends Controller
             ]);
     }
 
+    public function setFeatured(Property $property)
+    {
+     $property->update([
+            'is_featured' => ! $property->is_featured,
+        ]);
+
+         return redirect()
+            ->route('properties.index')
+            ->with('flash', [
+                'type' => 'success', 
+                'message' => __('Property featured status updated.'), 
+            ]);
+    }
+    
     public function toggleStatus(Property $property)
     {
      $property->update([
@@ -115,5 +141,15 @@ class PropertyController extends Controller
                 'type' => 'success', 
                 'message' => __('Property status updated.'), 
             ]);
+    }
+
+    public function destroyImage(PropertyImage $image, PropertyImageService $imageService)
+    {
+        $imageService->delete($image);
+
+        return back()->with('flash', [
+            'type' => 'success',
+            'message' => __('Image deleted successfully.'),
+        ]);
     }
 }
