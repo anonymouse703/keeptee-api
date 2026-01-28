@@ -63,8 +63,10 @@ Route::middleware('auth', 'verified')->group(function () {
     Route::controller(Admin\PropertyController::class)->group(function () {
         Route::put('properties/{property}/set-featured', 'setFeatured')
             ->name('properties.set-featured');
-        Route::put('properties/{property}/toggle-status', 'toggleStatus')
-            ->name('properties.toggle-status');
+        Route::put('properties/{property}/toggle-active-status', 'toggleActiveStatus')
+            ->name('properties.toggle-active-status');
+        Route::put('properties/{property}/status', 'updateStatus')  
+            ->name('properties.update-status');
         Route::delete('/property-images/{image}', 'destroyImage')
             ->name('property-images.destroy');
 

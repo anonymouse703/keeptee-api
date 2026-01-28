@@ -25,6 +25,8 @@ export interface PropertyListItem {
 }
 
 export interface Property {
+  id?: number
+  owner_id: number | null
   title: string
   description: string
   status: string
@@ -41,8 +43,16 @@ export interface Property {
   longitude?: number | null
   is_featured?: boolean
   is_active?: boolean
+  images?: Array<PropertyImage | File>
 }
 
+export interface PropertyImage {
+  id?: number
+  property_id?: number
+  image_url: string
+  is_primary?: boolean
+  sort_order?: number
+}
 
 export interface Tag {
   id?: number
@@ -52,12 +62,6 @@ export interface Tag {
   is_active?: boolean
 }
 
-// Tag with required ID for editing
-export interface TagWithId extends Tag {
-  id: number
-}
-
-// Tag list item for index/listing views
 export interface TagListItem {
   id: number
   name: string

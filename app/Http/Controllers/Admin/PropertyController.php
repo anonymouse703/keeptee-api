@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\Admin\PropertyResource;
 use App\Http\Requests\Admin\Property\StoreRequest;
+use App\Http\Requests\Admin\Property\StatusRequest;
 use App\Http\Requests\Admin\Property\UpdateRequest;
 use App\Services\PropertyImages\PropertyImageService;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
@@ -29,6 +30,7 @@ class PropertyController extends Controller
 
         return Inertia::render('properties/Index', [
             'properties' => PropertyResource::collection($properties),
+            'statuses' => Status::collection(),
         ]);
     }
 
@@ -45,12 +47,17 @@ class PropertyController extends Controller
         DB::beginTransaction();
 
         try {
-            $property = new Property();
-            $property->forceFill($request->validated());
+            $data = collect($request->validated())
+                ->except('images')
+                ->toArray();
 
+            $property = new Property();
+
+            $property->forceFill($data);
+
+            $property->owner_id = Auth::id();
             $property->is_active = true;
             $property->is_featured = true;
-            $property->owner_id = Auth::user()->id;
 
             $this->propertyRepository->save($property);
 
@@ -59,7 +66,7 @@ class PropertyController extends Controller
             }
 
             DB::commit();
-        } catch (\Exception $exception) {
+        } catch (\Throwable $exception) {
             DB::rollBack();
             report($exception);
 
@@ -74,8 +81,11 @@ class PropertyController extends Controller
             ]);
     }
 
+
     public function show(Property $property)
     {
+        $property->load(['images', 'owner']);
+
         return Inertia::render('properties/Show', [
             'property' => $property,
         ]);
@@ -83,17 +93,20 @@ class PropertyController extends Controller
 
     public function edit(Property $property)
     {
+        $property->load(['images', 'owner']);
+        
         return Inertia::render('properties/Edit', [
             'property' => new PropertyResource($property),
+            'property_types' => PropertyType::collection(),
+            'statuses' => Status::collection(),
         ]);
     }
-
 
     public function update(UpdateRequest $request, Property $property)
     {
         $payload = $request->validated();
 
-     $property->forceFill($payload);
+        $property->forceFill($payload);
 
         try {
             $this->propertyRepository->save($property);
@@ -139,7 +152,7 @@ class PropertyController extends Controller
             ]);
     }
     
-    public function toggleStatus(Property $property)
+    public function toggleActiveStatus(Property $property)
     {
      $property->update([
             'is_active' => ! $property->is_active,
@@ -150,6 +163,18 @@ class PropertyController extends Controller
             ->with('flash', [
                 'type' => 'success', 
                 'message' => __('Property status updated.'), 
+            ]);
+    }
+
+    public function updateStatus(Property $property, StatusRequest $request)
+    {
+        $property->update($request->validated());
+
+        return redirect()
+            ->route('properties.index')
+            ->with('flash', [
+                'type' => 'success', 
+                'message' => __('Property status updated successfully.'), 
             ]);
     }
 

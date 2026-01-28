@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { Upload, X, Image as ImageIcon, Eye, Trash2, AlertCircle } from 'lucide-vue-next'
+import { ref, computed, watch, onUnmounted } from 'vue'
+import { Upload, Trash2, AlertCircle, ImageIcon } from 'lucide-vue-next'
 import BaseButton from '@/components/ui/button/BaseButton.vue'
 
 interface ImageFile {
@@ -18,7 +18,8 @@ interface Props {
   accept?: string
   label?: string
   errors?: string[]
-  value?: File[]
+  modelValue?: File[]
+  existingImagesCount?: number // Track how many existing images there are
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -27,7 +28,8 @@ const props = withDefaults(defineProps<Props>(), {
   accept: 'image/*',
   label: 'Upload Images',
   errors: () => [],
-  value: () => []
+  modelValue: () => [],
+  existingImagesCount: 0
 })
 
 const emit = defineEmits<{
@@ -77,8 +79,9 @@ const processFiles = (files: File[]) => {
       return
     }
     
-    // Check maximum files
-    if (images.value.length + validFiles.length >= props.maxFiles) {
+    // Check maximum files (including existing images)
+    const totalImages = props.existingImagesCount + images.value.length + validFiles.length
+    if (totalImages >= props.maxFiles) {
       emitError(`Maximum ${props.maxFiles} images allowed`)
       return
     }
@@ -89,7 +92,7 @@ const processFiles = (files: File[]) => {
       preview: URL.createObjectURL(file),
       name: file.name,
       size: formatFileSize(file.size),
-      isPrimary: images.value.length === 0 && validFiles.length === 0 // First image is primary
+      isPrimary: props.existingImagesCount === 0 && images.value.length === 0 && validFiles.length === 0
     }
     
     validFiles.push(imageFile)
@@ -122,19 +125,26 @@ const handleDrop = (event: DragEvent) => {
 
 // Remove image
 const removeImage = (index: number) => {
-  // Revoke object URL to prevent memory leaks
   URL.revokeObjectURL(images.value[index].preview)
   
   const wasPrimary = images.value[index].isPrimary
   images.value.splice(index, 1)
   
-  // If primary image was removed, set first image as primary
   if (wasPrimary && images.value.length > 0) {
     images.value[0].isPrimary = true
   }
   
   emitFiles(images.value)
   emit('remove', index)
+}
+
+// Remove all images
+const removeAllImages = () => {
+  images.value.forEach(img => {
+    URL.revokeObjectURL(img.preview)
+  })
+  images.value = []
+  emitFiles([])
 }
 
 // Set primary image
@@ -153,12 +163,10 @@ const emitFiles = (files: ImageFile[]) => {
 
 // Emit error
 const emitError = (message: string) => {
-  // You could emit errors to parent or show inline
   console.error(message)
 }
 
 // Cleanup on unmount
-import { onUnmounted } from 'vue'
 onUnmounted(() => {
   images.value.forEach(img => {
     URL.revokeObjectURL(img.preview)
@@ -166,7 +174,7 @@ onUnmounted(() => {
 })
 
 // Watch for value changes from parent
-watch(() => props.value, (newFiles) => {
+watch(() => props.modelValue, (newFiles) => {
   // Handle initial value if needed
 }, { immediate: true })
 
@@ -176,9 +184,10 @@ const openFileDialog = () => {
 }
 
 // Computed
-const remainingSlots = computed(() => props.maxFiles - images.value.length)
+const totalImages = computed(() => props.existingImagesCount + images.value.length)
+const remainingSlots = computed(() => props.maxFiles - totalImages.value)
 const uploadLabel = computed(() => {
-  if (images.value.length === 0) {
+  if (totalImages.value === 0) {
     return 'Upload Images'
   }
   return `Add more images (${remainingSlots.value} remaining)`
@@ -187,60 +196,72 @@ const uploadLabel = computed(() => {
 
 <template>
   <div class="space-y-4">
-    <!-- Label -->
-    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-      {{ label }} <span class="text-red-500">*</span>
-    </label>
-    
-    <!-- Upload Area -->
-    <div
-      @dragover="handleDragOver"
-      @dragleave="handleDragLeave"
-      @drop="handleDrop"
-      @click="openFileDialog"
-      :class="[
-        'relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all',
-        isDragging 
-          ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20' 
-          : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-blue-500 dark:hover:bg-gray-800'
-      ]"
-    >
-      <input
-        ref="inputRef"
-        type="file"
-        :accept="accept"
-        :multiple="maxFiles > 1"
-        @change="handleFileSelect"
-        class="hidden"
-      />
-      
-      <div class="space-y-3">
-        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-          <Upload class="h-6 w-6 text-blue-600 dark:text-blue-400" />
-        </div>
+    <!-- Upload Area (only show if slots available) -->
+    <div v-if="remainingSlots > 0">
+      <div
+        @dragover="handleDragOver"
+        @dragleave="handleDragLeave"
+        @drop="handleDrop"
+        @click="openFileDialog"
+        :class="[
+          'relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all',
+          isDragging 
+            ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20' 
+            : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-blue-500 dark:hover:bg-gray-800'
+        ]"
+      >
+        <input
+          ref="inputRef"
+          type="file"
+          :accept="accept"
+          :multiple="maxFiles > 1"
+          @change="handleFileSelect"
+          class="hidden"
+        />
         
+        <div class="space-y-3">
+          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+            <Upload class="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          </div>
+          
+          <div>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">
+              {{ uploadLabel }}
+            </p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Drag & drop images or click to browse
+            </p>
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Maximum {{ maxFiles }} images • {{ maxSizeMB }}MB each • PNG, JPG, GIF, WebP
+            </p>
+          </div>
+          
+          <BaseButton
+            type="button"
+            variant="outline"
+            size="sm"
+            class="border-blue-600 text-blue-600 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-900/30"
+            @click.stop="openFileDialog"
+          >
+            <Upload class="mr-2 h-4 w-4" />
+            Browse Files
+          </BaseButton>
+        </div>
+      </div>
+    </div>
+
+    <!-- Max files reached message -->
+    <div v-else class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+      <div class="flex items-start gap-2">
+        <AlertCircle class="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
         <div>
-          <p class="text-sm font-medium text-gray-900 dark:text-white">
-            {{ uploadLabel }}
+          <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+            Maximum images reached
           </p>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Drag & drop images or click to browse
-          </p>
-          <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            Maximum {{ maxFiles }} images • {{ maxSizeMB }}MB each • PNG, JPG, GIF, WebP
+          <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
+            You've reached the maximum of {{ maxFiles }} images. Remove some images to add new ones.
           </p>
         </div>
-        
-        <BaseButton
-          type="button"
-          variant="outline"
-          size="sm"
-          class="border-blue-600 text-blue-600 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-900/30"
-          @click.stop="openFileDialog"
-        >
-          <Upload class="mr-2 h-4 w-4" />
-          Browse Files
-        </BaseButton>
       </div>
     </div>
 
@@ -256,11 +277,11 @@ const uploadLabel = computed(() => {
       </div>
     </div>
 
-    <!-- Image Grid -->
+    <!-- Image Grid (New Images Only) -->
     <div v-if="images.length > 0" class="space-y-4">
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-          Selected Images ({{ images.length }}/{{ maxFiles }})
+          New Images ({{ images.length }})
         </h4>
         <span class="text-xs text-gray-500 dark:text-gray-400">
           Click star to set as primary
@@ -285,6 +306,7 @@ const uploadLabel = computed(() => {
           <!-- Overlay Actions -->
           <div class="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
             <button
+              v-if="existingImagesCount === 0"
               type="button"
               @click.stop="setPrimaryImage(index)"
               class="rounded-full bg-white/90 p-2 text-yellow-600 hover:bg-white"
@@ -305,7 +327,7 @@ const uploadLabel = computed(() => {
           </div>
           
           <!-- Primary Badge -->
-          <div v-if="image.isPrimary" class="absolute top-2 left-2">
+          <div v-if="image.isPrimary && existingImagesCount === 0" class="absolute top-2 left-2">
             <span class="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
               <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -332,12 +354,12 @@ const uploadLabel = computed(() => {
           <div class="flex items-center gap-2">
             <ImageIcon class="h-4 w-4 text-gray-400" />
             <span class="text-sm text-gray-600 dark:text-gray-400">
-              {{ images.length }} image{{ images.length !== 1 ? 's' : '' }} selected
+              {{ images.length }} new image{{ images.length !== 1 ? 's' : '' }} selected
             </span>
           </div>
           <button
             type="button"
-            @click="images = []"
+            @click="removeAllImages"
             class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
           >
             Remove All

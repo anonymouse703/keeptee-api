@@ -11,7 +11,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 
 import { type PropertyListItem, type PaginationMeta } from '../../../types/type'
 
-import TagActions from './partials/Actions.vue'
+import Actions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
 
@@ -21,6 +21,7 @@ const props = defineProps<{
         data: PropertyListItem[]
         meta: PaginationMeta
     }
+    statuses?: Array<{ label: string; key: string }>
 }>()
 
 const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
@@ -170,7 +171,7 @@ const handleReset = () => {}
             <!-- Data Table -->
             <DataTable :columns="columns" :data="props.properties.data">
                 <template #row-actions="{ item }">
-                    <TagActions :item="item" />
+                    <Actions :item="item" :statuses="props.statuses ?? []" />
                 </template>
                  
                 <template #cell-color="{ item }">

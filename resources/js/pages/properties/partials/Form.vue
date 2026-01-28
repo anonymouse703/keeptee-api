@@ -28,10 +28,19 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+// Helper to convert to boolean
+const toBoolean = (value: any): boolean => {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+  if (typeof value === 'string') return value === '1' || value.toLowerCase() === 'true'
+  return false
+}
+
 // Form state
 const form = ref({
   title: props.property?.title || '',
   description: props.property?.description || '',
+  owner_id: props.property?.owner_id || null,
   price: props.property?.price != null ? String(props.property.price) : '',
   property_type: props.property?.property_type || 'house', 
   status: props.property?.status || 'for_sale',
@@ -44,8 +53,8 @@ const form = ref({
   country: props.property?.country || 'USA',
   latitude: props.property?.latitude != null ? String(props.property.latitude) : '',
   longitude: props.property?.longitude != null ? String(props.property.longitude) : '',
-  is_featured: props.property?.is_featured ?? false,
-  is_active: props.property?.is_active ?? true
+  is_featured: props.property?.is_featured != null ? toBoolean(props.property.is_featured) : false,
+  is_active: props.property?.is_active != null ? toBoolean(props.property.is_active) : true
 })
 
 // Options for selects
@@ -100,6 +109,7 @@ const handleSubmit = () => {
 
   const payload: Property = {
     title: form.value.title.trim(),
+    owner_id: props.property?.owner_id || null,
     description: form.value.description.trim(),
     price: parseNumberOrNull(form.value.price),
     property_type: form.value.property_type || 'house', 

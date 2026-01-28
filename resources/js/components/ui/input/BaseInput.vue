@@ -1,34 +1,25 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 
-/**
- * Fully generic input that supports any HTML input type
- * and forwards all attributes. Supports null values for number inputs.
- */
 const props = defineProps<{
   modelValue?: string | number | null
   type?: string
   error?: string
 }>()
 
-console.log('BaseInput errors props:', props.error);
 
-// Emit for v-model
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | null]
 }>()
 
-// Computed value to handle null properly
 const inputValue = computed({
   get() {
-    // For number inputs, return empty string if null/undefined
     if (props.type === 'number' && (props.modelValue === null || props.modelValue === undefined)) {
       return ''
     }
     return props.modelValue ?? ''
   },
   set(val: string | number) {
-    // Handle number type specially
     if (props.type === 'number') {
       if (val === '' || val === null) {
         emit('update:modelValue', null)
@@ -42,7 +33,6 @@ const inputValue = computed({
   }
 })
 
-// Update handler
 const updateValue = (event: Event) => {
   const target = event.target as HTMLInputElement
   
@@ -81,7 +71,6 @@ watch(() => props.error, (newVal) => {
       ]"
     />
     
-    <!-- Error message -->
     <p v-if="error" class="mt-1 text-sm text-red-600 dark:text-red-400">
       {{ error }}
     </p>

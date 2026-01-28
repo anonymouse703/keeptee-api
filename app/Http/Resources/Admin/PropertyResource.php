@@ -20,8 +20,10 @@ class PropertyResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
-            'status' => Status::class,
-            'property_type' => PropertyType::class,
+            // 'status' => Status::class,
+            // 'property_type' => PropertyType::class,
+            'status' => $this->status->value ?? $this->status, 
+            'property_type' => $this->property_type->value ?? $this->property_type,
             'price' => $this->price,
             'bedrooms' => $this->bedrooms,
             'bathrooms' => $this->bathrooms,
@@ -35,6 +37,10 @@ class PropertyResource extends JsonResource
             'owner_id' => $this->owner_id,
             'is_featured' => $this->is_featured,
             'is_active' => $this->is_active,
+
+            // RELATIONSHIPS
+            'images' => PropertyImageResource::collection($this->whenLoaded('images')),
+            'owner' => new UserResource($this->whenLoaded('owner')),
         ];
     }
 }
