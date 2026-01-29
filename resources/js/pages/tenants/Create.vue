@@ -1,53 +1,59 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
 import { Head } from '@inertiajs/vue3'
-import { Tag as TagIcon, ArrowLeft } from 'lucide-vue-next'
+import { Users, ArrowLeft } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 
-import { type Tag } from '../../../types/type'
+import { type TenantForm } from '../../../types/type'
 
 import Form from './partials/Form.vue'
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Tags', href: '/tags' },
-  { title: 'Create Tag', href: '/tags/create' }
+  { title: 'Tenants', href: '/tenants' },
+  { title: 'Create Tenant', href: '/tenants/create' }
 ]
+
+const formErrors = ref<Record<string, string[] | string>>({})
 
 const isLoading = ref(false)
 
-const handleSubmit = async (formData: Tag) => {
+const { properties } = defineProps<{
+  properties: Record<string, string>
+}>()
+
+const handleSubmit = async (formData: TenantForm) => {
   isLoading.value = true
-  
-  const payload = {
-    name: formData.name,
-    color: formData.color ?? null,
-    description: formData.description ?? null,
-    is_active: formData.is_active ?? true
+
+  const payload: Record<string, any> = {
+    ...formData,
+    email: formData.email ?? undefined,
+    phone: formData.phone ?? undefined,
+    lease_start: formData.lease_start ?? undefined,
+    lease_end: formData.lease_end ?? undefined
   }
-  
-  router.post('/tags', payload, {
+
+  router.post('/tenants', payload, {
     onSuccess: () => {
-      isLoading.value = false
-    },
-    onError: (errors) => {
-      isLoading.value = false
-      console.error('Error creating tag:', errors)
-    },
+            isLoading.value = false
+            formErrors.value = {}
+        },
+        onError: (errors) => {
+            isLoading.value = false
+            formErrors.value = errors
+            console.error('Error creating tenant:', errors)
+        },
     preserveScroll: true
   })
 }
 
-// Handle cancel
-const handleCancel = () => {
-  router.visit('/tags')
-}
+const handleCancel = () => router.visit('/tenants')
 </script>
 
 <template>
-  <Head title="Create Tag" />
+  <Head title="Create Tenant" />
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-4">
       <!-- Header -->
@@ -57,21 +63,20 @@ const handleCancel = () => {
             @click="handleCancel"
             class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
           >
-            <ArrowLeft class="h-4 w-4" />
-            Back to Tags
+            <ArrowLeft class="h-4 w-4" /> Back to Tenants
           </button>
         </div>
-        
+
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create New Tag</h1>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create New Tenant</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              Add a new tag to organize and categorize your properties
+              Add a new tenant to start managing your property efficiently
             </p>
           </div>
           <div class="flex items-center gap-2">
             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <TagIcon class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <Users class="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -82,6 +87,8 @@ const handleCancel = () => {
         <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <Form
             :isLoading="isLoading"
+            :properties="properties"
+            :errors="formErrors"
             @submit="handleSubmit"
             @cancel="handleCancel"
           />

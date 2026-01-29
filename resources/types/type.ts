@@ -11,7 +11,6 @@ export interface PaginationMeta {
     to?: number
 }
 
-// types/property.ts
 export interface PropertyListItem {
   id: number
   title: string
@@ -82,4 +81,27 @@ export interface Owner {
   name: string
   email: string
   phone?: string | null
+}
+
+export interface Tenant {
+  id: number
+  property_id: number
+  name: string
+  email: string
+  phone?: string | null
+  lease_start: string
+  lease_end: string
+  property?: Property
+  tenant_counts: number
+  created_at: string
+}
+
+export interface TenantForm {
+  id?: number
+  property_id: number | null
+  name: string
+  email: string
+  phone?: string | null
+  lease_start: string | null
+  lease_end: string | null
 }

@@ -187,4 +187,24 @@ class PropertyController extends Controller
             'message' => __('Image deleted successfully.'),
         ]);
     }
+
+    public function search(Request $request)
+    {
+        $query = (string) $request->query('query', '');
+
+        if ($query === '') {
+            return response()->json([]);
+        }
+
+        $properties = $this->propertyRepository
+            ->searchByTitle($query)
+            ->searchByActive()
+            ->searchByForRentable()
+            ->limit(10)
+            ->get(['id', 'title']);
+
+        return response()->json($properties);
+    }
+
+
 }

@@ -59,6 +59,8 @@ Route::middleware('auth', 'verified')->group(function () {
             ->name('maintenances.set-completed');
     });
 
+    Route::get('properties/search', [Admin\PropertyController::class, 'search'])
+        ->name('properties.search');
     Route::resource('properties', Admin\PropertyController::class);
     Route::controller(Admin\PropertyController::class)->group(function () {
         Route::put('properties/{property}/set-featured', 'setFeatured')

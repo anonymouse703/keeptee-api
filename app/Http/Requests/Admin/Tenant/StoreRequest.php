@@ -24,6 +24,7 @@ class StoreRequest extends FormRequest
         return [
             'property_id' => 'required|exists:properties,id',
             'name'        => 'required|string|max:255',
+            'email'       => 'nullable|email|max:255',
             'phone'       => 'required|string|max:20',
             'lease_start' => 'required|date|after_or_equal:today',
             'lease_end'   => 'required|date|after_or_equal:lease_start',

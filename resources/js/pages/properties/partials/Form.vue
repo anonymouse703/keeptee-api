@@ -28,7 +28,6 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-// Helper to convert to boolean
 const toBoolean = (value: any): boolean => {
   if (typeof value === 'boolean') return value
   if (typeof value === 'number') return value === 1
@@ -36,7 +35,6 @@ const toBoolean = (value: any): boolean => {
   return false
 }
 
-// Form state
 const form = ref({
   title: props.property?.title || '',
   description: props.property?.description || '',
@@ -57,7 +55,6 @@ const form = ref({
   is_active: props.property?.is_active != null ? toBoolean(props.property.is_active) : true
 })
 
-// Options for selects
 const propertyTypeOptions = computed(() =>
   props.propertyTypes.map(item => ({ label: item.label, value: item.key }))
 )
@@ -87,7 +84,6 @@ const activeOptions = [
   { label: 'Inactive', value: false }
 ]
 
-// Map API errors to first string
 const allErrors = computed(() => {
   const result: Record<string, string> = {}
   if (!props.errors) return result
@@ -99,7 +95,6 @@ const allErrors = computed(() => {
   return result
 })
 
-// Submit handler
 const handleSubmit = () => {
   const parseNumberOrNull = (value: any): number | null => {
     if (value === null || value === undefined || value === '') return null

@@ -10,7 +10,7 @@ import { type BreadcrumbItem } from '@/types'
 
 import { type Property } from '../../../types/type'
 
-import PropertyForm from './partials/Form.vue'
+import Form from './partials/Form.vue'
 
 interface Props {
     property_types?: Array<{ label: string; key: string }>
@@ -28,7 +28,6 @@ const isLoading = ref(false)
 const images = ref<File[]>([])
 const primaryImageIndex = ref(0)
 
-// NEW: reactive object to hold validation errors
 const formErrors = ref<Record<string, string[] | string>>({})
 
 const handlePrimaryImageChange = (index: number) => {
@@ -41,34 +40,31 @@ const handleImageRemove = (index: number) => {
 
 const handleSubmit = async (formData: Property) => {
     isLoading.value = true
-    formErrors.value = {} // reset errors
+    formErrors.value = {}
 
     const formDataToSend = new FormData()
 
-    // Append all form fields
     Object.keys(formData).forEach(key => {
         const value = formData[key as keyof Property]
         if (value !== null && value !== undefined && value !== '') {
             formDataToSend.append(key, String(value))
         }
     })
-
-    // Append images
+   
     images.value.forEach((file, index) => {
         formDataToSend.append(`images[${index}]`, file)
     })
-
-    // Append primary image index
+   
     formDataToSend.append('primary_image_index', String(primaryImageIndex.value))
 
     router.post('/properties', formDataToSend, {
         onSuccess: () => {
             isLoading.value = false
-            formErrors.value = {} // clear errors on success
+            formErrors.value = {}
         },
         onError: (errors) => {
             isLoading.value = false
-            formErrors.value = errors // pass API errors to Form.vue
+            formErrors.value = errors
             console.error('Error creating property:', errors)
         },
         preserveScroll: true,
@@ -159,7 +155,7 @@ const handleCancel = () => {
                 <!-- Right Column - Property Form -->
                 <div class="lg:col-span-2">
                     <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                        <PropertyForm
+                        <Form
                             :is-loading="isLoading"
                             :property-types="props.property_types"
                             :statuses="props.statuses"

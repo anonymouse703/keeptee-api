@@ -10,9 +10,15 @@ class Tenant extends Model
     protected $fillable = [
         'property_id',
         'name',
+        'email',
         'phone',
         'lease_start',
         'lease_end',
+    ];
+
+    protected $casts = [
+        'lease_start' => 'date', 
+        'lease_end' => 'date',
     ];
 
     public function property() : BelongsTo

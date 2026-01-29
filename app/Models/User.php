@@ -4,13 +4,16 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\User\Role;
+use App\Cache\User\UserById;
+use App\Models\Contracts\Timezone;
+use App\Models\Contracts\Cacheable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements Cacheable, Timezone
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
@@ -69,5 +72,15 @@ class User extends Authenticatable
     public function reviews() : HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function clearCache(): void
+    {
+        (new UserById($this->id))->invalidate();
+    }
+
+    public function getTimezone(): string
+    {
+        return 'Asia/Manila';
     }
 }

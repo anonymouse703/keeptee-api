@@ -14,13 +14,17 @@ class TenantResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $timezone = getModelTimezone($request->user());
+
         return [
             'id' => $this->id,
+            'proterty_id' => $this->property_id,
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
-            'lease_start' => $this->lease_start,
-            'lease_end' => $this->lease_end,
+            'lease_start' => $this->lease_start?->format('M. d, Y') ?? null,
+            'lease_end'   => $this->lease_end?->format('M. d, Y') ?? null,
+            'created_at' => $this->created_at?->timezone($timezone)?->format('Y-m-d H:i:s') ?? null,
 
             // RELATIONSHIPS
             'property' => new PropertyResource($this->whenLoaded('property')),

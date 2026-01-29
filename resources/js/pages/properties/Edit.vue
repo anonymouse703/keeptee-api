@@ -2,7 +2,7 @@
 import { router } from '@inertiajs/vue3'
 import { Head } from '@inertiajs/vue3'
 import { Home, ArrowLeft, Image as ImageIcon } from 'lucide-vue-next'
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 
 import ImageUpload from '@/components/ui/image-upload/ImageUpload.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -29,13 +29,6 @@ const props = defineProps<Props>()
 
 // Extract the actual property data
 const propertyData = computed(() => props.property.data)
-
-// Debug: Log the property data
-onMounted(() => {
-    console.log('Edit Property Page Loaded', propertyData.value)
-    console.log('Property Types:', props.property_types)
-    console.log('Statuses:', props.statuses)
-})
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Properties', href: '/properties' },

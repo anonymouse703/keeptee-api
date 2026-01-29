@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\Property;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Services\Tenant\TenantService;
 use App\Http\Resources\Admin\TenantResource;
 use App\Http\Requests\Admin\Tenant\StoreRequest;
 use App\Http\Requests\Admin\Tenant\UpdateRequest;
@@ -20,33 +21,35 @@ class TenantController extends Controller
 
     public function index()
     {
-        $tenants = $this->tenantRepository->paginate();
+        $tenants = $this->tenantRepository
+                    ->with(['property'])
+                    ->paginate();
 
         return Inertia::render('tenants/Index', [
-            'tenants' => TenantResource::collection($tenants),
+            'tenants' => TenantResource::collection($tenants)
         ]);
     }
 
     public function create()
     {
-        $properties = Property::pluck('title', 'id');
         return Inertia::render('tenants/Create', 
             [
-                'properties' => $properties,
+                'properties' => Property::pluck('title', 'id'),
             ]);
     }
 
-    public function store(StoreRequest $request)
+    public function store(StoreRequest $request, TenantService $tenantService)
     {
-        $payload = $request->validated();
-
-        $tenant = new Tenant();
-        $tenant->forceFill($payload);
-
+        // dd($request->all());
         try {
-            $this->tenantRepository->save($tenant);
+            $tenantService->create($request->validated());
         } catch (Exception $exception) {
             report($exception);
+
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => __('Something went wrong. Please try again.'),
+            ]);
         }
 
         return redirect()
@@ -68,6 +71,7 @@ class TenantController extends Controller
     {
         return Inertia::render('tenants/Edit', [
             'tenant' => new TenantResource($tenant),
+            'properties' => Property::pluck('title', 'id'),
         ]);
     }
 
