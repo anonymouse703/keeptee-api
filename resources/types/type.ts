@@ -44,14 +44,18 @@ export interface Property {
   is_featured?: boolean
   is_active?: boolean
   images?: Array<PropertyImage | File>
+  created_at?: string
+  owner?: Owner
+  images_data?: PropertyImage[]
 }
 
 export interface PropertyImage {
-  id?: number
-  property_id?: number
+  id: number
+  property_id: number
   image_url: string
-  is_primary?: boolean
-  sort_order?: number
+  thumbnail_url: string | null
+  sort_order: number
+  is_primary: boolean
 }
 
 export interface Tag {
@@ -73,3 +77,9 @@ export interface TagListItem {
 }
 
 
+export interface Owner {
+  id: number
+  name: string
+  email: string
+  phone?: string | null
+}

@@ -6,7 +6,8 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  BookDashed
 } from 'lucide-vue-next'
 import { ref, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 
@@ -84,6 +85,11 @@ const openMenu = async () => {
       left: left + window.scrollX,
     }
   }
+}
+
+const show = () => {
+  router.visit(`/properties/${props.item.id}`)
+  open.value = false
 }
 
 const edit = () => {
@@ -172,6 +178,14 @@ onBeforeUnmount(() => {
       >
         <Edit class="h-4 w-4 text-blue-500" /> 
         Edit
+      </button>
+
+       <button 
+        @click="show" 
+        class="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+      >
+        <BookDashed class="h-4 w-4 text-green-500" /> 
+        Show
       </button>
 
       <button

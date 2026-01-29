@@ -37,6 +37,7 @@ class PropertyResource extends JsonResource
             'owner_id' => $this->owner_id,
             'is_featured' => $this->is_featured,
             'is_active' => $this->is_active,
+            'created_at' => $this->created_at,
 
             // RELATIONSHIPS
             'images' => PropertyImageResource::collection($this->whenLoaded('images')),

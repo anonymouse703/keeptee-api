@@ -97,26 +97,34 @@ class PropertyImageService
 
     /**
      * Generate thumbnail for a given image
+     * Uses Intervention Image 3.x syntax
      */
     protected function generateThumbnail(UploadedFile $image, int $propertyId, string $disk): ?string
     {
         try {
-            $img = Image::make($image->getRealPath());
+            // Read the image using Intervention Image 3.x
+            $img = Image::read($image->getRealPath());
 
-            // Resize to 300x300 while maintaining aspect ratio
-            $img->resize(300, 300, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            });
+            // Cover crops to exact 300x300 (good for property thumbnails)
+            // Alternative: use ->scale(width: 300) to maintain aspect ratio
+            $img->cover(300, 300);
 
-            $filename = Str::uuid() . '_thumb.' . $image->getClientOriginalExtension();
+            // Generate unique filename - force .jpg for consistency and smaller size
+            $filename = Str::uuid() . '_thumb.jpg';
             $thumbnailPath = "properties/{$propertyId}/thumbnails/{$filename}";
 
-            Storage::disk($disk)->put($thumbnailPath, $img->encode());
+            // Encode as JPEG with 85% quality for optimal file size/quality ratio
+            $encodedImage = $img->toJpeg(85);
+
+            // Save to storage
+            Storage::disk($disk)->put($thumbnailPath, $encodedImage);
 
             return $thumbnailPath;
         } catch (\Exception $e) {
-            Log::error('Thumbnail generation failed: ' . $e->getMessage());
+            Log::error('Thumbnail generation failed: ' . $e->getMessage(), [
+                'property_id' => $propertyId,
+                'original_image' => $image->getClientOriginalName(),
+            ]);
             return null;
         }
     }
@@ -132,7 +140,8 @@ class PropertyImageService
                 'width' => $imageInfo[0] ?? null,
                 'height' => $imageInfo[1] ?? null,
             ];
-        } catch (\Exception) {
+        } catch (\Exception $e) {
+            Log::warning('Failed to get image dimensions: ' . $e->getMessage());
             return ['width' => null, 'height' => null];
         }
     }
@@ -142,7 +151,10 @@ class PropertyImageService
      */
     public function setPrimary(PropertyImage $image): void
     {
+        // Reset all images for this property to non-primary
         $image->property->images()->update(['is_primary' => false]);
+        
+        // Set this image as primary
         $image->update(['is_primary' => true]);
     }
 
@@ -152,7 +164,53 @@ class PropertyImageService
     public function reorder(Property $property, array $order): void
     {
         foreach ($order as $imageId => $sortOrder) {
-            $property->images()->where('id', $imageId)->update(['sort_order' => $sortOrder]);
+            $property->images()
+                ->where('id', $imageId)
+                ->update(['sort_order' => $sortOrder]);
         }
+    }
+
+    /**
+     * Bulk update - change multiple images' primary status and sort order at once
+     */
+    public function bulkUpdate(Property $property, array $updates): void
+    {
+        foreach ($updates as $imageId => $data) {
+            $updateData = [];
+            
+            if (isset($data['is_primary'])) {
+                $updateData['is_primary'] = $data['is_primary'];
+            }
+            
+            if (isset($data['sort_order'])) {
+                $updateData['sort_order'] = $data['sort_order'];
+            }
+            
+            if (!empty($updateData)) {
+                $property->images()
+                    ->where('id', $imageId)
+                    ->update($updateData);
+            }
+        }
+    }
+
+    /**
+     * Get primary image for a property
+     */
+    public function getPrimaryImage(Property $property): ?PropertyImage
+    {
+        return $property->images()
+            ->where('is_primary', true)
+            ->first();
+    }
+
+    /**
+     * Get all images ordered by sort_order
+     */
+    public function getOrderedImages(Property $property): \Illuminate\Database\Eloquent\Collection
+    {
+        return $property->images()
+            ->orderBy('sort_order')
+            ->get();
     }
 }
