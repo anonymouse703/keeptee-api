@@ -14,36 +14,21 @@ import { type TagListItem } from '../../../types/type'
 import TagActions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
+const props = defineProps({
+    tags: Object,
+})
 
-interface PaginationMeta {
-    current_page: number
-    last_page: number
-    links: {
-        url: string | null
-        label: string
-        active: boolean
-    }[]
-    total?: number
-    from?: number
-    to?: number
-}
+const tagsData = computed(() => props.tags?.data ?? [])
 
-const props = defineProps<{
-    tags: {
-        data: TagListItem[]
-        meta: PaginationMeta
-    }
-}>()
+const paginationLinks = computed(() => props.tags?.meta ?? {})
 
 const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
 
-const tags = computed(() => props.tags.data)
-
 const filteredTags = computed<TagListItem[]>(() => {
-    if (!searchFilterRef.value) return tags.value
+    if (!searchFilterRef.value) return tagsData.value
 
     const filters = searchFilterRef.value.filters
-    let result = [...tags.value]
+    let result = [...tagsData.value]
 
     // Search
     if (filters.search) {
@@ -104,8 +89,8 @@ const statusOptions = [
 const sortOptions = [
     { label: 'Name (A–Z)', value: 'name_asc' },
     { label: 'Name (Z–A)', value: 'name_desc' },
-    { label: 'Most Properties', value: 'count_desc' },
-    { label: 'Least Properties', value: 'count_asc' },
+    { label: 'Most Tags', value: 'count_desc' },
+    { label: 'Least Tags', value: 'count_asc' },
     { label: 'Newest First', value: 'created_desc' },
     { label: 'Oldest First', value: 'created_asc' },
 ]
@@ -146,7 +131,7 @@ const handleReset = () => {}
                     </div>
                     <div class="flex items-center gap-2">
                         <Badge variant="outline" class="text-xs">
-                            {{ props.tags.meta.total }} tags total
+                            {{paginationLinks.total }} tags total
                         </Badge>
                         <Badge
                             variant="outline"
@@ -179,7 +164,7 @@ const handleReset = () => {}
             />
 
             <!-- Data Table -->
-            <DataTable :columns="columns" :data="props.tags.data">
+            <DataTable :columns="columns" :data="tagsData">
                 <template #row-actions="{ item }">
                     <TagActions :item="item" />
                 </template>
@@ -210,7 +195,7 @@ const handleReset = () => {}
 
             <!-- Pagination -->
             <Pagination
-                :meta="props.tags.meta"
+                :meta="paginationLinks"
                 @page-change="handlePageChange"
             />
         </div>

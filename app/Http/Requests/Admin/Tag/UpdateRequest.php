@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Tag;
 
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateRequest extends FormRequest
@@ -21,10 +22,13 @@ class UpdateRequest extends FormRequest
      */
       public function rules(): array
     {
-        $tagId = $this->route('tag'); // Get the tag ID from the route
-
         return [
-            'name' => 'required|string|max:255|unique:tags,name,' . $tagId,
+              'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('tags', 'name')->ignore($this->route('tag'))
+            ],
             'color' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
             'description' => 'nullable|string|max:1000',
             'is_active' => 'nullable|boolean',

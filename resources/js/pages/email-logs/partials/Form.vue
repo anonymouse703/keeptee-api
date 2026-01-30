@@ -1,47 +1,30 @@
 <script setup lang="ts">
-import { Tag as TagIcon, AlertCircle } from 'lucide-vue-next'
-import { ref, computed } from 'vue'
+import { router, useForm } from '@inertiajs/vue3'
+import { Tag as TagIcon } from 'lucide-vue-next'
+import { computed } from 'vue'
 
 import BaseButton from '@/components/ui/button/BaseButton.vue'
 import BaseInput from '@/components/ui/input/BaseInput.vue'
 import BaseSelect from '@/components/ui/input/Select.vue'
 
-import { type Tag } from '../../../../types/type'
-
-interface Props {
-  tag?: Tag
-  isLoading?: boolean
-  errors?: Record<string, string>
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  tag: () => ({ name: '', color: '#3b82f6', description: '', is_active: true }),
-  isLoading: false,
-  errors: () => ({})
-})
-
-const emit = defineEmits<{
-  submit: [formData: Tag]
-  cancel: []
+const props = defineProps<{
+  tag?: any
 }>()
 
-// Safe initialization
 const t = props.tag ?? { name: '', color: '#3b82f6', description: '', is_active: true }
 
-const form = ref<Tag>({
+const form = useForm({
   name: t.name ?? '',
   color: t.color ?? '#3b82f6',
   description: t.description ?? '',
   is_active: t.is_active ?? true
 })
 
-// Status options
 const statusOptions = [
   { label: 'Active', value: true },
   { label: 'Inactive', value: false }
 ]
 
-// Color options
 const colorOptions = [
   { label: 'Blue', value: '#3b82f6', class: 'bg-blue-500' },
   { label: 'Green', value: '#10b981', class: 'bg-green-500' },
@@ -53,16 +36,24 @@ const colorOptions = [
   { label: 'Teal', value: '#14b8a6', class: 'bg-teal-500' }
 ]
 
-// Validation
-const isFormValid = computed(() => (form.value.name ?? '').trim().length > 0)
+const isFormValid = computed(() => (form.name ?? '').trim().length > 0)
+
+const allErrors = computed(() => form.errors)
 
 const handleSubmit = () => {
-  if (isFormValid.value) {
-    emit('submit', form.value)
+  if (!isFormValid.value) return
+
+  if (props.tag?.id) {
+    form.put(`/tags/${props.tag.id}`, { preserveScroll: true })
+  } else {
+    form.post('/tags', { preserveScroll: true })
   }
 }
 
-const handleCancel = () => { emit('cancel') }
+const handleCancel = () => {
+  form.reset()
+  router.visit('/tags')
+}
 </script>
 
 <template>
@@ -81,25 +72,8 @@ const handleCancel = () => { emit('cancel') }
         </p>
       </div>
     </div>
-
-    <!-- Form Errors -->
-    <div v-if="Object.keys(errors).length > 0" class="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-4">
-      <div class="flex items-start gap-3">
-        <AlertCircle class="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-        <div class="space-y-1">
-          <h4 class="text-sm font-medium text-red-800 dark:text-red-300">
-            Please fix the following errors:
-          </h4>
-          <ul class="list-disc list-inside text-sm text-red-700 dark:text-red-400 space-y-1">
-            <li v-for="(error, field) in errors" :key="field">{{ error }}</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Form Fields -->
     <div class="space-y-5">
-      <!-- Name -->
+      
       <div>
         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
           Tag Name <span class="text-red-500">*</span>
@@ -108,7 +82,7 @@ const handleCancel = () => { emit('cancel') }
           v-model="form.name"
           type="text"
           placeholder="Enter tag name"
-          :error="errors.name"
+          :error="allErrors.name"
           required
           class="w-full"
         />
@@ -117,7 +91,6 @@ const handleCancel = () => { emit('cancel') }
         </p>
       </div>
 
-      <!-- Color -->
       <div>
         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
           Tag Color
@@ -148,7 +121,6 @@ const handleCancel = () => { emit('cancel') }
         </p>
       </div>
 
-      <!-- Status -->
       <div>
         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
         <BaseSelect
@@ -159,7 +131,6 @@ const handleCancel = () => { emit('cancel') }
         />
       </div>
 
-      <!-- Description -->
       <div>
         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
         <textarea
@@ -171,13 +142,12 @@ const handleCancel = () => { emit('cancel') }
       </div>
     </div>
 
-    <!-- Form Actions -->
     <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
       <BaseButton
         type="button"
         variant="outline"
         @click="handleCancel"
-        :disabled="isLoading"
+        :disabled="form.processing"
         class="border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
       >
         Cancel
@@ -185,8 +155,8 @@ const handleCancel = () => { emit('cancel') }
       <BaseButton
         type="button"
         @click="handleSubmit"
-        :disabled="!isFormValid || isLoading"
-        :loading="isLoading"
+        :disabled="!isFormValid || form.processing"
+        :loading="form.processing"
         class="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {{ tag?.id ? 'Update Tag' : 'Create Tag' }}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3'
+import { router, useForm } from '@inertiajs/vue3'
 import { Users, AlertCircle, X } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
@@ -110,7 +110,7 @@ const handleSubmit = () => {
 
 const handleCancel = () => {
   form.reset()
-  history.back()
+  router.visit('/tenants')
 }
 </script>
 

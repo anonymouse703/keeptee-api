@@ -13,10 +13,8 @@ import {
 } from 'lucide-vue-next'
 import { ref, computed, onMounted } from 'vue'
 
-import { Property, PropertyImage } from '../../../types/type'
-
 const props = defineProps<{
-  property: { data: Property }
+  property: any
 }>()
 
 const property = computed(() => props.property.data)
@@ -29,13 +27,13 @@ onMounted(() => {
   }, 100)
 })
 
-const propertyImages = computed<PropertyImage[]>(() => {
+const propertyImages = computed(() => {
   if (!property.value.images?.length) return []
-  return [...(property.value.images as PropertyImage[])]
+  return [...(property.value.images )]
     .sort((a, b) => a.sort_order - b.sort_order)
 })
 
-const activeImage = computed<PropertyImage | null>(() => {
+const activeImage = computed(() => {
   return propertyImages.value[activeImageIndex.value] ?? null
 })
 
@@ -56,32 +54,37 @@ const formattedDate = computed(() =>
   )
 )
 
+const statusLabels = {
+  for_sale: 'For Sale',
+  for_rent: 'For Rent',
+  sold: 'Sold',
+  rented: 'Rented',
+} as const;
+
+const statusColors = {
+  for_sale: 'bg-emerald-100 text-emerald-800',
+  for_rent: 'bg-blue-100 text-blue-800',
+  sold: 'bg-gray-100 text-gray-800',
+  rented: 'bg-purple-100 text-purple-800',
+} as const;
+
 const statusLabel = computed(
   () =>
-    ({
-      for_sale: 'For Sale',
-      for_rent: 'For Rent',
-      sold: 'Sold',
-      rented: 'Rented',
-    }[property.value.status] ?? property.value.status)
-)
+    statusLabels[property.value.status as keyof typeof statusLabels] ??
+    property.value.status
+);
+
+const statusColor = computed(
+  () =>
+    statusColors[property.value.status as keyof typeof statusColors] ??
+    'bg-gray-100 text-gray-800'
+);
 
 const fullAddress = computed(
   () =>
     `${property.value.address}, ${property.value.city}, ${property.value.state}, ${property.value.country}`
 )
 
-// Status badge color based on status
-const statusColor = computed(() => {
-  const colors = {
-    for_sale: 'bg-emerald-100 text-emerald-800',
-    for_rent: 'bg-blue-100 text-blue-800',
-    sold: 'bg-gray-100 text-gray-800',
-    rented: 'bg-purple-100 text-purple-800',
-  } as const
-
-  return colors[property.value.status as keyof typeof colors] || 'bg-gray-100 text-gray-800'
-})
 </script>
 
 <template>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Amenity;
 
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateRequest extends FormRequest
@@ -21,10 +22,13 @@ class UpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        $amenityId = $this->route('amenity');
-
         return [
-            'name' => 'required|string|max:255|unique:amenities,name,' . $amenityId,
+              'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('amenities', 'name')->ignore($this->route('amenity'))
+            ],
         ];
     }
 }
