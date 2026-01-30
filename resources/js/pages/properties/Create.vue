@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router, Head } from '@inertiajs/vue3'
-import { Home, ArrowLeft, Image as ImageIcon } from 'lucide-vue-next'
+import { Building2, ArrowLeft, Image as ImageIcon } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 import ImageUpload from '@/components/ui/image-upload/ImageUpload.vue'
@@ -97,7 +97,7 @@ const handleCancel = () => {
           </div>
 
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-            <Home class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <Building2 class="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
       </div>

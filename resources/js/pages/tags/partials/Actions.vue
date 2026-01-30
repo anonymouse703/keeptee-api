@@ -5,13 +5,7 @@ import { ref, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 
 import Modal from '@/components/ui/modal/Modal.vue'
 
-interface Tag {
-  id: number
-  is_active: boolean
-  name: string
-}
-
-const props = defineProps<{ item: Tag }>()
+const props = defineProps<{ item: any }>()
 
 const open = ref(false)
 const buttonRef = ref<HTMLElement | null>(null)
@@ -21,7 +15,6 @@ const showDeleteModal = ref(false)
 const showToggleModal = ref(false)
 const toggleAction = ref<'activate' | 'deactivate' | null>(null)
 
-// Computed messages for modals
 const deleteMessage = computed(() => `Delete "${props.item.name}"?`)
 const toggleMessage = computed(() => {
   const action = toggleAction.value === 'activate' ? 'activate' : 'deactivate'
@@ -35,23 +28,21 @@ const openMenu = async () => {
     const rect = buttonRef.value!.getBoundingClientRect()
     const viewportWidth = window.innerWidth
     
-    // Calculate position with viewport constraints
-    let left = rect.right - 180 // Default position
+  
+    let left = rect.right - 180
     let top = rect.bottom + 6
     
-    // Ensure dropdown doesn't go off right edge
-    const dropdownWidth = 176 // w-44 = 11rem ≈ 176px
+  
+    const dropdownWidth = 176
     if (left + dropdownWidth > viewportWidth) {
       left = viewportWidth - dropdownWidth - 16
     }
-    
-    // Ensure dropdown doesn't go off left edge
+  
     if (left < 0) {
       left = 16
     }
-    
-    // Ensure dropdown doesn't go off bottom edge
-    const dropdownHeight = 132 // Approximate height for 3 items
+  
+    const dropdownHeight = 132
     const viewportHeight = window.innerHeight
     if (top + dropdownHeight > viewportHeight) {
       top = rect.top - dropdownHeight - 6
@@ -139,7 +130,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Trigger Button -->
+
   <button 
     ref="buttonRef" 
     @click.stop="openMenu" 
@@ -148,7 +139,6 @@ onBeforeUnmount(() => {
     <MoreVertical class="h-5 w-5" />
   </button>
 
-  <!-- Actions Dropdown -->
   <Teleport to="body">
     <Transition
       enter-active-class="transition-all duration-150 ease-out"
@@ -163,7 +153,6 @@ onBeforeUnmount(() => {
         class="fixed z-9999 w-44 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg"
         :style="{ top: `${position.top}px`, left: `${position.left}px` }"
       >
-        <!-- Edit Action -->
         <button 
           @click="edit" 
           class="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg transition-colors"
@@ -172,7 +161,6 @@ onBeforeUnmount(() => {
           <span>Edit</span>
         </button>
 
-        <!-- Toggle Active/Inactive Action -->
         <button
           @click="openToggleModal"
           class="flex w-full items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -185,7 +173,6 @@ onBeforeUnmount(() => {
           <span>{{ item.is_active ? 'Deactivate' : 'Activate' }}</span>
         </button>
 
-        <!-- Delete Action -->
         <button 
           @click="openDeleteModal" 
           class="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -197,7 +184,6 @@ onBeforeUnmount(() => {
     </Transition>
   </Teleport>
 
-  <!-- Delete Confirmation Modal -->
   <Modal 
     :show="showDeleteModal" 
     title="Confirm Delete" 
@@ -209,7 +195,6 @@ onBeforeUnmount(() => {
     @cancel="showDeleteModal = false" 
   />
 
-  <!-- Toggle Status Confirmation Modal -->
   <Modal 
     :show="showToggleModal" 
     :title="toggleAction === 'activate' ? 'Activate Tag' : 'Deactivate Tag'" 

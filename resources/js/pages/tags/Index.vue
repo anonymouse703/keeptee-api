@@ -9,9 +9,7 @@ import DataTable from '@/components/ui/table/DataTable.vue'
 import Pagination from '@/components/ui/table/Pagination.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
-import { type TagListItem } from '../../../types/type'
-
-import TagActions from './partials/Actions.vue'
+import Actions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
 const props = defineProps({
@@ -24,13 +22,12 @@ const paginationLinks = computed(() => props.tags?.meta ?? {})
 
 const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
 
-const filteredTags = computed<TagListItem[]>(() => {
+const filteredTags = computed(() => {
     if (!searchFilterRef.value) return tagsData.value
 
     const filters = searchFilterRef.value.filters
     let result = [...tagsData.value]
 
-    // Search
     if (filters.search) {
         const q = filters.search.toLowerCase()
         result = result.filter(tag =>
@@ -38,7 +35,6 @@ const filteredTags = computed<TagListItem[]>(() => {
         )
     }
 
-    // Sorting
     if (filters.sort) {
         switch (filters.sort) {
             case 'name_asc':
@@ -113,7 +109,7 @@ const handleReset = () => {}
 <template>
     <AppLayout>
         <div class="relative space-y-6 p-4 md:p-6 lg:p-8">
-            <!-- Header -->
+
             <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div class="space-y-2">
                     <div class="flex items-center gap-3">
@@ -150,7 +146,6 @@ const handleReset = () => {}
                 </div>
             </div>
 
-            <!-- Search -->
             <SearchFilter
                 ref="searchFilterRef"
                 search-placeholder="Search tags..."
@@ -163,10 +158,9 @@ const handleReset = () => {}
                 @reset="handleReset"
             />
 
-            <!-- Data Table -->
             <DataTable :columns="columns" :data="tagsData">
                 <template #row-actions="{ item }">
-                    <TagActions :item="item" />
+                    <Actions :item="item" />
                 </template>
                  
                 <template #cell-color="{ item }">
@@ -193,7 +187,6 @@ const handleReset = () => {}
                 </template>
             </DataTable>
 
-            <!-- Pagination -->
             <Pagination
                 :meta="paginationLinks"
                 @page-change="handlePageChange"

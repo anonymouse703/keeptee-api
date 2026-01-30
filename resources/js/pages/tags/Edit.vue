@@ -2,62 +2,37 @@
 import { router } from '@inertiajs/vue3'
 import { Head } from '@inertiajs/vue3'
 import { Tag as TagIcon, ArrowLeft } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 import DeleteModal from '@/components/ui/modal/Modal.vue' 
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 
-import { type Tag, type TagWithId } from '../../../types/type'
 
 import TagForm from './partials/Form.vue'
 
-const props = defineProps<{
-  tag: TagWithId | { data: TagWithId } 
-  errors?: Record<string, string>
-}>()
+const props = defineProps({
+  tag: Object,
+});
 
-const tagData: TagWithId = 'data' in props.tag ? props.tag.data : props.tag
-
-console.log(tagData) 
+const tagData = computed(() => props.tag?.data ?? [])
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Tags', href: '/tags' },
-  { title: 'Edit Tag', href: `/tags/${tagData.id}/edit` }
+  { title: 'Edit Tag', href: `/tags/${tagData.value?.vid}/edit` }
 ]
 
-const isLoading = ref(false)
-
-const handleSubmit = async (formData: Tag) => {
-  isLoading.value = true
-
-  const payload = {
-    name: formData.name,
-    color: formData.color ?? null,
-    description: formData.description ?? null,
-    is_active: formData.is_active ?? true
-  }
-
-  router.put(`/tags/${tagData.id}`, payload, {
-    onSuccess: () => { isLoading.value = false },
-    onError: (errors) => {
-      isLoading.value = false
-      console.error('Error updating tag:', errors)
-    },
-    preserveScroll: true
-  })
-}
 
 const showDeleteModal = ref(false)
 
 const confirmDelete = () => {
-  router.delete(`/tags/${tagData.id}`, {
+  router.delete(`/tags/${tagData.value?.id}`, {
     onSuccess: () => router.visit('/tags')
   })
   showDeleteModal.value = false
 }
 
-const handleCancel = () => {
+const handleBack = () => {
   router.visit('/tags')
 }
 
@@ -74,7 +49,7 @@ const handleDelete = () => {
       <div class="mb-6">
         <div class="flex items-center gap-3 mb-4">
           <button
-            @click="handleCancel"
+            @click="handleBack"
             class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
           >
             <ArrowLeft class="h-4 w-4" />
@@ -102,10 +77,6 @@ const handleDelete = () => {
         <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <TagForm
             :tag="tagData"
-            :isLoading="isLoading"
-            :errors="errors"
-            @submit="handleSubmit"
-            @cancel="handleCancel"
           />
         </div>
 

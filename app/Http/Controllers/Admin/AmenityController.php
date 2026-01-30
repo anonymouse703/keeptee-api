@@ -60,14 +60,14 @@ class AmenityController extends Controller
     }
 
 
-    public function update(UpdateRequest $request, Amenity $tag)
+    public function update(UpdateRequest $request, Amenity $amenity)
     {
         $payload = $request->validated();
 
-        $tag->forceFill($payload);
+        $amenity->forceFill($payload);
 
         try {
-            $this->amenityRepository->save($tag);
+            $this->amenityRepository->save($amenity);
         } catch (Exception $exception) {
             report($exception);
         }

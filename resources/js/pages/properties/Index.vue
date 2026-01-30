@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
-import { HomeIcon } from 'lucide-vue-next'
+import { Building2 } from 'lucide-vue-next'
 import { ref, computed } from 'vue'
 
 import { Badge } from '@/components/ui/badge'
@@ -118,7 +118,7 @@ const handleReset = () => {}
                 <div class="space-y-2">
                     <div class="flex items-center gap-3">
                         <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-emerald-500">
-                            <HomeIcon class="size-5 text-white" />
+                            <Building2 class="size-5 text-white" />
                         </div>
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
@@ -144,7 +144,7 @@ const handleReset = () => {}
 
                 <div class="shrink-0">
                     <BaseButton @click="router.visit('/properties/create')">
-                        <HomeIcon class="size-4" />
+                        <Building2 class="size-4" />
                         Add New Properties
                     </BaseButton>
                 </div>
