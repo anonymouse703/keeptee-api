@@ -62,6 +62,8 @@ class TenantController extends Controller
 
     public function show(Tenant $tenant)
     {
+        $tenant->load('property');
+        
         return Inertia::render('tenants/Show', [
             'tenant' => $tenant,
         ]);

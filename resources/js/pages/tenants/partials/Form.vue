@@ -50,7 +50,6 @@ const selectedOption = ref<{ value: number; label: string } | null>(
     : null
 )
 
-// Store the original property selection to allow restoration
 const originalProperty = ref<{ value: number; label: string } | null>(
   selectedOption.value ? { ...selectedOption.value } : null
 )
@@ -76,7 +75,7 @@ const handleClearProperty = () => {
 }
 
 const handleCancelPropertyChange = () => {
-  // Restore the original property
+
   if (originalProperty.value) {
     form.property_id = originalProperty.value.value
     selectedOption.value = { ...originalProperty.value }
@@ -86,7 +85,7 @@ const handleCancelPropertyChange = () => {
 
 const handlePropertySelect = () => {
   if (form.property_id && selectedOption.value) {
-    // Update the original property when a new selection is made
+
     originalProperty.value = { ...selectedOption.value }
     showAsyncSelect.value = false
   }
@@ -181,20 +180,12 @@ const handleCancel = () => {
 
         <!-- AsyncSelect for searching/selecting property -->
         <div v-else ref="asyncSelectContainer" class="relative" @keydown="handleKeyDown" tabindex="-1">
-          <AsyncSelect 
-            v-model="form.property_id" 
-            :fetchOptions="fetchProperties" 
-            :selectedOption="selectedOption"
-            placeholder="Search and select a property..." 
-            :error="allErrors.property_id"
-            @update:modelValue="handlePropertySelect" 
-          />
+          <AsyncSelect v-model="form.property_id" :fetchOptions="fetchProperties" :selectedOption="selectedOption"
+            placeholder="Search and select a property..." :error="allErrors.property_id"
+            @update:modelValue="handlePropertySelect" />
 
           <!-- Cancel button to restore original property (shows only if there was an original property) -->
-          <button 
-            v-if="originalProperty" 
-            type="button" 
-            @click="handleCancelPropertyChange"
+          <button v-if="originalProperty" type="button" @click="handleCancelPropertyChange"
             class="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors z-10"
             title="Cancel change (ESC)">
             <X class="h-4 w-4 text-gray-500 dark:text-gray-400" />

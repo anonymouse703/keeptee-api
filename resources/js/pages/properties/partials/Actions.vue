@@ -180,7 +180,7 @@ onBeforeUnmount(() => {
         Edit
       </button>
 
-       <button 
+      <button 
         @click="show" 
         class="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
       >

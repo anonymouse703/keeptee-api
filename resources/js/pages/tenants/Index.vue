@@ -30,7 +30,6 @@ const filteredTenants = computed<Tenant[]>(() => {
     const filters = searchFilterRef.value.filters
     let result = [...tenantsData.value]
 
-    // Search
     if (filters.search) {
         const q = filters.search.toLowerCase()
         result = result.filter(tenant =>
@@ -38,7 +37,6 @@ const filteredTenants = computed<Tenant[]>(() => {
         )
     }
 
-    // Sorting
     if (filters.sort) {
         switch (filters.sort) {
             case 'name_asc':
@@ -115,7 +113,7 @@ const handleReset = () => {}
 <template>
     <AppLayout>
         <div class="relative space-y-6 p-4 md:p-6 lg:p-8">
-            <!-- Header -->
+           
             <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div class="space-y-2">
                     <div class="flex items-center gap-3">
@@ -152,7 +150,6 @@ const handleReset = () => {}
                 </div>
             </div>
 
-            <!-- Search -->
             <SearchFilter
                 ref="searchFilterRef"
                 search-placeholder="Search tenants..."
@@ -165,7 +162,7 @@ const handleReset = () => {}
                 @reset="handleReset"
             />
 
-            <!-- Data Table -->
+           
             <DataTable :columns="columns" :data="tenantsData">
                 <template #row-actions="{ item }">
                     <Actions :item="item" />
@@ -176,7 +173,7 @@ const handleReset = () => {}
                 </template>
             </DataTable>
 
-            <!-- Pagination -->
+           
             <Pagination
                 :meta="paginationLinks"
                 @page-change="handlePageChange"

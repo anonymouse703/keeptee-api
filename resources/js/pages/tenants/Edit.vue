@@ -9,12 +9,10 @@ import type { BreadcrumbItem } from '@/types'
 import Form from './partials/Form.vue'
 
 const props = defineProps({
-    tenant: Object,
+  tenant: Object,
 });
 
 const tenantData = computed(() => props.tenant?.data ?? [])
-
-console.log(tenantData.value);
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Tenants', href: '/tenants' },
@@ -25,17 +23,15 @@ const goBack = () => history.back()
 </script>
 
 <template>
+
   <Head :title="`Edit Tenant: ${tenantData.name}`" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-4">
-      <!-- Header -->
       <div class="mb-6">
         <div class="flex items-center gap-3 mb-4">
-          <button
-            @click="goBack"
-            class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
-          >
+          <button @click="goBack"
+            class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300">
             <ArrowLeft class="h-4 w-4" /> Back to Tenants
           </button>
         </div>
@@ -56,7 +52,6 @@ const goBack = () => history.back()
         </div>
       </div>
 
-      <!-- Form -->
       <div class="mx-auto max-w-2xl">
         <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <Form :tenant="tenantData" />
