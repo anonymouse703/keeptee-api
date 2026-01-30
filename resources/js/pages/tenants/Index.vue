@@ -15,35 +15,20 @@ import Actions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
 
-interface PaginationMeta {
-    current_page: number
-    last_page: number
-    links: {
-        url: string | null
-        label: string
-        active: boolean
-    }[]
-    total?: number
-    from?: number
-    to?: number
-}
+const props = defineProps({
+    tenants: Object,
+})
 
-const props = defineProps<{
-    tenants: {
-        data: Tenant[]
-        meta: PaginationMeta
-    },
-}>()
+const tenantsData = computed(() => props.tenants?.data ?? [])
+
+const paginationLinks = computed(() => props.tenants?.meta ?? {})
 
 const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
 
-const tenants = computed(() => props.tenants.data)
-
 const filteredTenants = computed<Tenant[]>(() => {
-    if (!searchFilterRef.value) return tenants.value
-
+    if (!searchFilterRef.value) return tenantsData.value
     const filters = searchFilterRef.value.filters
-    let result = [...tenants.value]
+    let result = [...tenantsData.value]
 
     // Search
     if (filters.search) {
@@ -148,7 +133,7 @@ const handleReset = () => {}
                     </div>
                     <div class="flex items-center gap-2">
                         <Badge variant="outline" class="text-xs">
-                            {{ props.tenants.meta.total }} tenants total
+                            {{ paginationLinks.total }} tenants total
                         </Badge>
                         <Badge
                             variant="outline"
@@ -181,7 +166,7 @@ const handleReset = () => {}
             />
 
             <!-- Data Table -->
-            <DataTable :columns="columns" :data="props.tenants.data">
+            <DataTable :columns="columns" :data="tenantsData">
                 <template #row-actions="{ item }">
                     <Actions :item="item" />
                 </template>
@@ -193,7 +178,7 @@ const handleReset = () => {}
 
             <!-- Pagination -->
             <Pagination
-                :meta="props.tenants.meta"
+                :meta="paginationLinks"
                 @page-change="handlePageChange"
             />
         </div>

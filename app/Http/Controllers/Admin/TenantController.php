@@ -69,6 +69,8 @@ class TenantController extends Controller
 
     public function edit(Tenant $tenant)
     {
+        $tenant->load('property');
+        
         return Inertia::render('tenants/Edit', [
             'tenant' => new TenantResource($tenant),
             'properties' => Property::pluck('title', 'id'),
