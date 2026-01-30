@@ -9,30 +9,25 @@ import DataTable from '@/components/ui/table/DataTable.vue'
 import Pagination from '@/components/ui/table/Pagination.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
-import { type PropertyListItem, type PaginationMeta } from '../../../types/type'
-
 import Actions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
+const props = defineProps({
+    properties: Object,
+    statuses: Array
+})
 
+const propertiesData = computed(() => props.properties?.data ?? [])
 
-const props = defineProps<{
-    properties: {
-        data: PropertyListItem[]
-        meta: PaginationMeta
-    }
-    statuses?: Array<{ label: string; key: string }>
-}>()
+const paginationLinks = computed(() => props.properties?.meta ?? {})
 
 const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
 
-const properties = computed(() => props.properties.data)
-
-const filteredproperties = computed<PropertyListItem[]>(() => {
-    if (!searchFilterRef.value) return properties.value
+const filteredproperties = computed(() => {
+    if (!searchFilterRef.value) return propertiesData.value
 
     const filters = searchFilterRef.value.filters
-    let result = [...properties.value]
+    let result = [...propertiesData.value]
 
     // Search
     if (filters.search) {
@@ -136,7 +131,7 @@ const handleReset = () => {}
                     </div>
                     <div class="flex items-center gap-2">
                         <Badge variant="outline" class="text-xs">
-                            {{ props.properties.meta.total }} properties total
+                            {{ paginationLinks.total }} properties total
                         </Badge>
                         <Badge
                             variant="outline"
@@ -169,7 +164,7 @@ const handleReset = () => {}
             />
 
             <!-- Data Table -->
-            <DataTable :columns="columns" :data="props.properties.data">
+            <DataTable :columns="columns" :data="filteredproperties">
                 <template #row-actions="{ item }">
                     <Actions :item="item" :statuses="props.statuses ?? []" />
                 </template>
@@ -207,9 +202,8 @@ const handleReset = () => {}
                 </template>
             </DataTable>
 
-            <!-- Pagination -->
             <Pagination
-                :meta="props.properties.meta"
+                :meta="paginationLinks"
                 @page-change="handlePageChange"
             />
         </div>

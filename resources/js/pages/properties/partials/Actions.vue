@@ -13,24 +13,10 @@ import { ref, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 
 import Modal from '@/components/ui/modal/Modal.vue'
 
-interface StatusOption {
-  label: string
-  key: string
-}
-
-interface Item {
-  id: number
-  is_active: boolean
-  name: string
-}
-
-const props = withDefaults(defineProps<{
-  item: Item
-  statuses?: StatusOption[]
-}>(), {
-  statuses: () => [],
-})
-
+const props = defineProps<{
+  item: any
+  statuses: any[]
+}>()
 
 const open = ref(false)
 const buttonRef = ref<HTMLElement | null>(null)
@@ -41,13 +27,13 @@ const showToggleModal = ref(false)
 const showStatusModal = ref(false)
 
 const toggleAction = ref<'activate' | 'deactivate' | null>(null)
-const selectedStatus = ref<StatusOption | null>(null)
+const selectedStatus = ref<any>(null)
 
-const deleteMessage = computed(() => `Delete "${props.item.name}"?`)
+const deleteMessage = computed(() => `Delete "${props.item.title}"?`)
 
 const toggleMessage = computed(() => {
   const action = toggleAction.value === 'activate' ? 'activate' : 'deactivate'
-  return `Are you sure you want to ${action} "${props.item.name}"?`
+  return `Are you sure you want to ${action} "${props.item.title}"?`
 })
 
 const statusMessage = computed(() => {
@@ -111,7 +97,7 @@ const confirmToggleStatus = () => {
   )
 }
 
-const openStatusModal = (status: StatusOption) => {
+const openStatusModal = (status: any) => {
   selectedStatus.value = status
   showStatusModal.value = true
   open.value = false

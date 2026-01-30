@@ -1,30 +1,21 @@
 <script setup lang="ts">
+import { useForm } from '@inertiajs/vue3'
 import { Home, DollarSign, Ruler, Bed, Bath, MapPin, Star } from 'lucide-vue-next'
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 
 import BaseButton from '@/components/ui/button/BaseButton.vue'
 import BaseInput from '@/components/ui/input/BaseInput.vue'
 import BaseSelect from '@/components/ui/input/Select.vue'
 
-import { type Property } from '../../../../types/type'
-
-interface Props {
-  property?: Property
-  isLoading?: boolean
-  errors?: Record<string, string[] | string>
-  propertyTypes?: Array<{ label: string; key: string }>
-  statuses?: Array<{ label: string; key: string }>
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  isLoading: false,
-  errors: () => ({}),
-  propertyTypes: () => [],
-  statuses: () => []
-})
+const props = defineProps<{
+  property?: any
+  property_types?: { key: string; label: string }[]
+  statuses?: { key: string; label: string }[]
+  errors?: Record<string, string>
+}>()
 
 const emit = defineEmits<{
-  submit: [formData: Property]
+  submit: [payload: any]
   cancel: []
 }>()
 
@@ -35,32 +26,40 @@ const toBoolean = (value: any): boolean => {
   return false
 }
 
-const form = ref({
-  title: props.property?.title || '',
-  description: props.property?.description || '',
-  owner_id: props.property?.owner_id || null,
+const form = useForm({
+  title: props.property?.title ?? '',
+  description: props.property?.description ?? '',
+  owner_id: props.property?.owner_id ?? null,
   price: props.property?.price != null ? String(props.property.price) : '',
-  property_type: props.property?.property_type || 'house', 
-  status: props.property?.status || 'for_sale',
+  property_type: props.property?.property_type ?? 'house',
+  status: props.property?.status ?? 'for_sale',
   bedrooms: props.property?.bedrooms != null ? String(props.property.bedrooms) : '0',
   bathrooms: props.property?.bathrooms != null ? String(props.property.bathrooms) : '0',
   floor_area: props.property?.floor_area != null ? String(props.property.floor_area) : '',
-  address: props.property?.address || '',
-  city: props.property?.city || '',
-  state: props.property?.state || '',
-  country: props.property?.country || 'USA',
+  address: props.property?.address ?? '',
+  city: props.property?.city ?? '',
+  state: props.property?.state ?? '',
+  country: props.property?.country ?? 'USA',
   latitude: props.property?.latitude != null ? String(props.property.latitude) : '',
   longitude: props.property?.longitude != null ? String(props.property.longitude) : '',
-  is_featured: props.property?.is_featured != null ? toBoolean(props.property.is_featured) : false,
-  is_active: props.property?.is_active != null ? toBoolean(props.property.is_active) : true
+  is_featured: props.property?.is_featured != null
+    ? toBoolean(props.property.is_featured)
+    : false,
+  is_active: props.property?.is_active != null
+    ? toBoolean(props.property.is_active)
+    : true
 })
 
+const allErrors = computed(() => form.errors)
+
 const propertyTypeOptions = computed(() =>
-  props.propertyTypes.map(item => ({ label: item.label, value: item.key }))
+  props.property_types?.map(i => ({ label: i.label, value: i.key })) ?? []
 )
+
 const statusOptions = computed(() =>
-  props.statuses.map(item => ({ label: item.label, value: item.key }))
+  props.statuses?.map(i => ({ label: i.label, value: i.key })) ?? []
 )
+
 const bedroomOptions = [
   { label: 'Studio', value: '0' },
   { label: '1 Bedroom', value: '1' },
@@ -69,64 +68,46 @@ const bedroomOptions = [
   { label: '4 Bedrooms', value: '4' },
   { label: '5+ Bedrooms', value: '5' }
 ]
+
 const bathroomOptions = [
   { label: '1 Bathroom', value: '1' },
   { label: '2 Bathrooms', value: '2' },
   { label: '3 Bathrooms', value: '3' },
   { label: '4+ Bathrooms', value: '4' }
 ]
+
 const featuredOptions = [
   { label: 'Yes', value: true },
   { label: 'No', value: false }
 ]
+
 const activeOptions = [
   { label: 'Active', value: true },
   { label: 'Inactive', value: false }
 ]
 
-const allErrors = computed(() => {
-  const result: Record<string, string> = {}
-  if (!props.errors) return result
-  for (const key in props.errors) {
-    const value = props.errors[key]
-    if (Array.isArray(value)) result[key] = value[0]
-    else result[key] = value
-  }
-  return result
-})
+const parseNumberOrNull = (value: any): number | null => {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return isNaN(num) ? null : num
+}
 
 const handleSubmit = () => {
-  const parseNumberOrNull = (value: any): number | null => {
-    if (value === null || value === undefined || value === '') return null
-    const num = parseFloat(String(value))
-    return isNaN(num) ? null : num
-  }
+  form.transform(data => ({
+    ...data,
+    price: parseNumberOrNull(data.price),
+    bedrooms: parseNumberOrNull(data.bedrooms),
+    bathrooms: parseNumberOrNull(data.bathrooms),
+    floor_area: parseNumberOrNull(data.floor_area),
+    latitude: parseNumberOrNull(data.latitude),
+    longitude: parseNumberOrNull(data.longitude)
+  }))
 
-  const payload: Property = {
-    title: form.value.title.trim(),
-    owner_id: props.property?.owner_id || null,
-    description: form.value.description.trim(),
-    price: parseNumberOrNull(form.value.price),
-    property_type: form.value.property_type || 'house', 
-    status: form.value.status || 'for_sale',
-    bedrooms: parseNumberOrNull(form.value.bedrooms),
-    bathrooms: parseNumberOrNull(form.value.bathrooms),
-    floor_area: parseNumberOrNull(form.value.floor_area),
-    address: form.value.address.trim(),
-    city: form.value.city.trim(),
-    state: form.value.state.trim(),
-    country: form.value.country.trim() || 'USA',
-    latitude: parseNumberOrNull(form.value.latitude),
-    longitude: parseNumberOrNull(form.value.longitude),
-    is_featured: form.value.is_featured,
-    is_active: form.value.is_active
-  }
-
-  emit('submit', payload)
+  emit('submit', form.data())
 }
 
 const handleCancel = () => emit('cancel')
-</script>
+</script>>
 
 <template>
   <div class="space-y-6">
@@ -383,10 +364,10 @@ const handleCancel = () => emit('cancel')
 
     <!-- Actions -->
     <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
-      <BaseButton type="button" variant="outline" @click="handleCancel" :disabled="props.isLoading">
+      <BaseButton type="button" variant="outline" @click="handleCancel" :disabled="form.processing">
         Cancel
       </BaseButton>
-      <BaseButton type="button" @click="handleSubmit" :disabled="props.isLoading" :loading="props.isLoading">
+      <BaseButton type="button" @click="handleSubmit" :disabled="form.processing">
         {{ props.property?.title ? 'Update Property' : 'Create Property' }}
       </BaseButton>
     </div>

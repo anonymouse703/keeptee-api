@@ -9,8 +9,6 @@ import DataTable from '@/components/ui/table/DataTable.vue'
 import Pagination from '@/components/ui/table/Pagination.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
-import { type Tenant } from '../../../types/type'
-
 import Actions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
@@ -25,7 +23,7 @@ const paginationLinks = computed(() => props.tenants?.meta ?? {})
 
 const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
 
-const filteredTenants = computed<Tenant[]>(() => {
+const filteredTenants = computed(() => {
     if (!searchFilterRef.value) return tenantsData.value
     const filters = searchFilterRef.value.filters
     let result = [...tenantsData.value]
@@ -161,9 +159,8 @@ const handleReset = () => {}
                 @sort="handleSort"
                 @reset="handleReset"
             />
-
            
-            <DataTable :columns="columns" :data="tenantsData">
+            <DataTable :columns="columns" :data="filteredTenants">
                 <template #row-actions="{ item }">
                     <Actions :item="item" />
                 </template>
@@ -173,7 +170,6 @@ const handleReset = () => {}
                 </template>
             </DataTable>
 
-           
             <Pagination
                 :meta="paginationLinks"
                 @page-change="handlePageChange"

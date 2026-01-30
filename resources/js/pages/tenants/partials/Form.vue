@@ -32,7 +32,7 @@ const formatDateForInput = (dateString: string | null): string | null => {
 
 const form = useForm({
   name: props.tenant?.name ?? '',
-  property_id: props.tenant?.proterty_id ?? null,
+  property_id: props.tenant?.property_id ?? null,
   email: props.tenant?.email ?? '',
   phone: props.tenant?.phone ?? '',
   lease_start: formatDateForInput(props.tenant?.lease_start) ?? null,

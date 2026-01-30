@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3'
 import { Head } from '@inertiajs/vue3'
 import { Users, ArrowLeft } from 'lucide-vue-next'
 
@@ -12,7 +13,9 @@ const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Create Tenant', href: '/tenants/create' },
 ]
 
-const goBack = () => history.back()
+const handleCancel = () => {
+    router.visit('/tenants')
+}
 </script>
 
 <template>
@@ -23,7 +26,7 @@ const goBack = () => history.back()
     <div class="p-4">
       <div class="mb-6">
         <div class="flex items-center gap-3 mb-4">
-          <button @click="goBack"
+          <button @click="handleCancel"
             class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300">
             <ArrowLeft class="h-4 w-4" /> Back to Tenants
           </button>
