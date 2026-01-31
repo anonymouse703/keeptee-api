@@ -39,6 +39,8 @@ Route::middleware('auth', 'verified')->group(function () {
 
     Route::resource('email-logs', Admin\EmailLogController::class);
 
+    Route::get('leases/search-tenant', [Admin\LeaseController::class, 'searchTenant'])
+        ->name('leases.search-tenant');
     Route::resource('leases', Admin\LeaseController::class);
     Route::controller(Admin\LeaseController::class)->group(function () {
         Route::put('leases/{lease}/set-active', 'setActiveStatus')
@@ -59,8 +61,8 @@ Route::middleware('auth', 'verified')->group(function () {
             ->name('maintenances.set-completed');
     });
 
-    Route::get('properties/search', [Admin\PropertyController::class, 'search'])
-        ->name('properties.search');
+    Route::get('properties/search-property', [Admin\PropertyController::class, 'searchProperty'])
+        ->name('properties.search-property');
     Route::resource('properties', Admin\PropertyController::class);
     Route::controller(Admin\PropertyController::class)->group(function () {
         Route::put('properties/{property}/set-featured', 'setFeatured')

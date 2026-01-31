@@ -6,7 +6,9 @@ use Exception;
 use Inertia\Inertia;
 use App\Models\RentPayment;
 use Illuminate\Http\Request;
+use App\Enums\RentPayment\Status;
 use App\Http\Controllers\Controller;
+use App\Enums\RentPayment\PaymentMethod;
 use App\Http\Resources\Admin\RentPaymentResource;
 use App\Http\Requests\Admin\RentPayment\StoreRequest;
 use App\Http\Requests\Admin\RentPayment\UpdateRequest;
@@ -19,7 +21,9 @@ class RentPaymentController extends Controller
 
     public function index()
     {
-        $rentalPayments = $this->rentPaymentRepository->paginate();
+        $rentalPayments = $this->rentPaymentRepository
+                            ->with(['lease.tenant'])
+                            ->paginate();
 
         return Inertia::render('rent-payments/Index', [
             'rentalPayments' => RentPaymentResource::collection($rentalPayments),
@@ -28,7 +32,10 @@ class RentPaymentController extends Controller
 
     public function create()
     {
-        return Inertia::render('rent-payments/Create');
+        return Inertia::render('rent-payments/Create', [
+            'payment_method' => PaymentMethod::collection(),
+            'status' => Status::collection(),
+        ]);
     }
 
     public function store(StoreRequest $request)
@@ -121,4 +128,20 @@ class RentPaymentController extends Controller
                 'message' => __('Rental payment status updated to :status.', ['status' => ucfirst($status)]),
             ]);
     }   
+
+    public function searchTenant(Request $request)
+    {
+        $query = (string) $request->query('query', '');
+
+        if ($query === '') {
+            return response()->json([]);
+        }
+
+        $properties = $this->rentPaymentRepository
+            ->searchByKey($query)
+            ->searchByActive()
+            ->paginate();
+
+        return response()->json($properties);
+    }
 }

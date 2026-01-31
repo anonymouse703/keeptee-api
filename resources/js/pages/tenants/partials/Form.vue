@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
-import { Users, AlertCircle, X } from 'lucide-vue-next'
+import { Users, X } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
 import BaseButton from '@/components/ui/button/BaseButton.vue'
@@ -10,8 +10,6 @@ import BaseInput from '@/components/ui/input/BaseInput.vue'
 const props = defineProps<{
   tenant?: any
 }>()
-
-console.log('Received tenant prop:', props.tenant)
 
 const formatDateForInput = (dateString: string | null): string | null => {
   if (!dateString) return null
@@ -32,7 +30,6 @@ const formatDateForInput = (dateString: string | null): string | null => {
   }
 }
 
-// Initialize selectedOption first
 const selectedOption = ref<{ value: number; label: string } | null>(
   props.tenant?.property
     ? { value: props.tenant.property_id, label: props.tenant.property.title }
@@ -43,7 +40,6 @@ const originalProperty = ref<{ value: number; label: string } | null>(
   selectedOption.value ? { ...selectedOption.value } : null
 )
 
-// Initialize form with property_id from tenant
 const form = useForm({
   name: props.tenant?.name ?? '',
   property_id: props.tenant?.property_id ?? null,
@@ -61,7 +57,7 @@ const showAsyncSelect = ref(!props.tenant?.property)
 
 const fetchProperties = async (query: string) => {
   try {
-    const res = await fetch(`/properties/search?query=${encodeURIComponent(query)}`)
+    const res = await fetch(`/properties/search-property?query=${encodeURIComponent(query)}`)
     if (!res.ok) throw new Error('Failed to fetch properties')
     const data = await res.json()
     return data.map((p: any) => ({ value: p.id, label: p.title }))
@@ -100,8 +96,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
 }
 
 const handleSubmit = () => {
-  // Ensure property_id is always set before submitting
-  // Priority: form.property_id > selectedOption > tenant.property_id
   if (!form.property_id) {
     if (selectedOption.value?.value) {
       form.property_id = selectedOption.value.value
@@ -109,16 +103,6 @@ const handleSubmit = () => {
       form.property_id = props.tenant.property_id
     }
   }
-
-  // Debug logging (remove in production)
-  console.log('Submitting form with data:', {
-    property_id: form.property_id,
-    name: form.name,
-    email: form.email,
-    phone: form.phone,
-    lease_start: form.lease_start,
-    lease_end: form.lease_end
-  })
 
   if (props.tenant?.id) {
     form.put(`/tenants/${props.tenant.id}`, { preserveScroll: true })
@@ -148,23 +132,6 @@ const handleCancel = () => {
             ? 'Update tenant information'
             : 'Add a new tenant to manage your property' }}
         </p>
-      </div>
-    </div>
-
-    <div v-if="Object.keys(allErrors).length > 0"
-      class="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-4">
-      <div class="flex items-start gap-3">
-        <AlertCircle class="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-        <div class="space-y-1">
-          <h4 class="text-sm font-medium text-red-800 dark:text-red-300">
-            Please fix the following errors:
-          </h4>
-          <ul class="list-disc list-inside text-sm text-red-700 dark:text-red-400 space-y-1">
-            <li v-for="(error, field) in allErrors" :key="field">
-              {{ error }}
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
 

@@ -5,10 +5,13 @@ namespace App\Models;
 use App\Enums\RentPayment\Status;
 use Illuminate\Database\Eloquent\Model;
 use App\Enums\RentPayment\PaymentMethod;
+use App\Models\Traits\GeneratesPaymentReferenceId;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RentPayment extends Model
 {
+    use GeneratesPaymentReferenceId;
+
     protected $fillable = [
         'lease_id',
         'amount',
@@ -16,6 +19,9 @@ class RentPayment extends Model
         'paid_at',
         'status',
         'payment_method',
+        'late_fee',
+        'interest_rate',
+        'notes'
     ];
 
     /**

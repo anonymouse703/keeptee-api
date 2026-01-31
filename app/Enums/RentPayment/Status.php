@@ -11,4 +11,6 @@ enum Status: string
     case Pending = 'pending';
     case Pain = 'paid';
     case Overdue = 'overdue';
+    case Partial = 'partial';
+    case Failed = 'failed';
 }

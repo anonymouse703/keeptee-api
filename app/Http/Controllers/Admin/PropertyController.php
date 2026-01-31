@@ -188,7 +188,7 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function search(Request $request)
+    public function searchProperty(Request $request)
     {
         $query = (string) $request->query('query', '');
 
@@ -205,6 +205,5 @@ class PropertyController extends Controller
 
         return response()->json($properties);
     }
-
 
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
-import { MoreVertical, Edit, Trash2, CheckCircle, XCircle } from 'lucide-vue-next'
+import { MoreVertical, Edit, Trash2 } from 'lucide-vue-next'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 
 import Modal from '@/components/ui/modal/Modal.vue'
@@ -12,16 +12,9 @@ const buttonRef = ref<HTMLElement | null>(null)
 const dropdownRef = ref<HTMLElement | null>(null)
 
 const showDeleteModal = ref(false)
-const showToggleModal = ref(false)
-const toggleAction = ref<'activate' | 'deactivate' | null>(null)
 
 const deleteMessage = computed(() => `Delete "${props.item.name}"?`)
-const toggleMessage = computed(() => {
-  const action = toggleAction.value === 'activate' ? 'activate' : 'deactivate'
-  return `Are you sure you want to ${action} "${props.item.name}"?`
-})
 
-// Custom event to close other dropdowns
 const CLOSE_DROPDOWNS_EVENT = 'close-all-dropdowns'
 
 const openMenu = () => {
@@ -42,18 +35,6 @@ const closeDropdown = () => {
 const edit = () => {
   router.visit(`/amenities/${props.item.id}/edit`)
   closeDropdown()
-}
-
-const openToggleModal = () => {
-  toggleAction.value = props.item.is_active ? 'deactivate' : 'activate'
-  showToggleModal.value = true
-  closeDropdown()
-}
-
-const confirmToggleStatus = () => {
-  router.put(`/amenities/${props.item.id}/toggle-status`, {}, {
-    onSuccess: () => (showToggleModal.value = false),
-  })
 }
 
 const confirmDelete = () => {
@@ -112,7 +93,6 @@ onBeforeUnmount(() => {
       <MoreVertical class="h-5 w-5" />
     </button>
 
-    <!-- Dropdown -->
     <Transition enter-active-class="transition-all duration-150 ease-out" enter-from-class="opacity-0 scale-95"
       enter-to-class="opacity-100 scale-100" leave-active-class="transition-all duration-100 ease-in"
       leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
@@ -128,14 +108,6 @@ onBeforeUnmount(() => {
           <span>Edit</span>
         </button>
 
-        <button @click="openToggleModal" class="flex w-full items-center gap-2 px-4 py-2.5 text-sm
-                 hover:bg-gray-50 dark:hover:bg-gray-800" :class="item.is_active
-                  ? 'text-yellow-600 dark:text-yellow-500'
-                  : 'text-green-600 dark:text-green-500'">
-          <component :is="item.is_active ? XCircle : CheckCircle" class="h-4 w-4 shrink-0" />
-          <span>{{ item.is_active ? 'Deactivate' : 'Activate' }}</span>
-        </button>
-
         <button @click="openDeleteModal" class="flex w-full items-center gap-2 px-4 py-2.5 text-sm
                  text-red-600 dark:text-red-500
                  hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -145,13 +117,7 @@ onBeforeUnmount(() => {
       </div>
     </Transition>
 
-    <!-- Modals -->
     <Modal :show="showDeleteModal" title="Confirm Delete" :message="deleteMessage" confirmText="Delete"
       cancelText="Cancel" variant="danger" @confirm="confirmDelete" @cancel="showDeleteModal = false" />
-
-    <Modal :show="showToggleModal" :title="toggleAction === 'activate' ? 'Activate Tag' : 'Deactivate Tag'"
-      :message="toggleMessage" confirmText="Yes" cancelText="Cancel"
-      :variant="toggleAction === 'activate' ? 'success' : 'warning'" @confirm="confirmToggleStatus"
-      @cancel="showToggleModal = false" />
   </div>
 </template>

@@ -17,8 +17,12 @@ return new class extends Migration
             $table->decimal('amount', 12, 2);
             $table->date('due_date');
             $table->date('paid_at')->nullable();
-            $table->enum('status', ['pending', 'paid', 'overdue'])->default('pending');
+            $table->enum('status', ['pending','paid','overdue','partial','failed'])->default('pending');
             $table->enum('payment_method', ['cash', 'bank_transfer', 'credit_card'])->nullable();
+            $table->string('reference_id')->unique()->nullable();
+            $table->decimal('late_fee', 12, 2)->default(0);
+            $table->decimal('interest_rate', 5, 2)->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

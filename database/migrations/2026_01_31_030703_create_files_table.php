@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('files', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('uploader_id')->index();
+            $table->string('path');
+            $table->string('thumbnail_path')->nullable();
+            $table->string('disk', 10);
+            $table->string('name')->nullable();
+            $table->string('size', 50)->nullable();
+            $table->string('type', 50)->nullable();
+            $table->string('extension', 10)->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('files');
+    }
+};

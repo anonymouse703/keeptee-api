@@ -65,17 +65,17 @@ const openMenu = async () => {
    Actions
 -------------------------------- */
 const show = () => {
-  router.visit(`/tenants/${props.item.id}`)
+  router.visit(`/rent-payments/${props.item.id}`)
   open.value = false
 }
 
 const edit = () => {
-  router.visit(`/tenants/${props.item.id}/edit`)
+  router.visit(`/rent-payments/${props.item.id}/edit`)
   open.value = false
 }
 
 const confirmDelete = () => {
-  router.delete(`/tenants/${props.item.id}`)
+  router.delete(`/rent-payments/${props.item.id}`)
   showDeleteModal.value = false
 }
 

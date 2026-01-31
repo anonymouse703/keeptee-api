@@ -19,6 +19,9 @@ return new class extends Migration
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->enum('status', ['active', 'ended', 'terminated']);
+            $table->text('terms')->nullable();
+            $table->text('notes')->nullable();
+            $table->unsignedBigInteger('file_id')->nullable();
             $table->timestamps();
         });
     }

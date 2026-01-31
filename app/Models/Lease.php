@@ -33,4 +33,9 @@ class Lease extends Model
     {
         return $this->belongsTo(Property::class, 'property_id');
     }
+
+    public function tenant() : BelongsTo
+    {
+        return $this->belongsTo(Tenant::class, 'tenant_id');
+    }
 }

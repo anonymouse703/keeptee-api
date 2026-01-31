@@ -15,26 +15,14 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import {
-    edit as editAppearance
-} from '@/routes/appearance'
-import {
-    edit as editProfile
-} from '@/routes/profile'
-import {
-    show as showTwoFactor
-} from '@/routes/two-factor'
-import {
-    edit as editPassword
-} from '@/routes/user-password'
 import type { NavItem } from '@/types'
 
 // Sidebar navigation links
 const sidebarNavItems: NavItem[] = [
-    { title: 'Profile', href: editProfile(), icon: User },
-    { title: 'Password', href: editPassword(), icon: Shield },
-    { title: 'Two-Factor Auth', href: showTwoFactor(), icon: Shield },
-    { title: 'Appearance', href: editAppearance(), icon: Settings },
+    { title: 'Profile', href: '/profile.edit', icon: User },
+    { title: 'Password', href: '/user-password.edit', icon: Shield },
+    { title: 'Two-Factor Auth', href: '/two-factor.show', icon: Shield },
+    { title: 'Appearance', href: '/appearance.edit', icon: Settings },
 ]
 
 // Logout handler
@@ -107,12 +95,13 @@ const handleLogout = () => {
                     <DropdownMenuItem
                         as="div"
                         class="w-full"
-                        >
+                    >
                         <Link
                             class="flex items-center gap-2 w-full text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20 p-2.5 rounded"
                             :href="'/logout'"
                             @click="handleLogout"
                             as="button"
+                            method="post"
                             data-test="logout-button"
                         >
                             <LogOut class="size-4" />

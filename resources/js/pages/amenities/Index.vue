@@ -16,8 +16,6 @@ const props = defineProps({
     amenities: Object,
 })
 
-console.log(props.amenities)
-
 const amenitiesData = computed(() => props.amenities?.data ?? [])
 
 const paginationLinks = computed(() => props.amenities?.meta ?? {})
