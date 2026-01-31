@@ -28,6 +28,8 @@ class StoreRequest extends FormRequest
             'phone'       => 'required|string|max:20',
             'lease_start' => 'required|date',
             'lease_end'   => 'required|date|after_or_equal:lease_start',
+            'file'        => ['nullable', 'array'],
+            'file.*'      => ['file', 'mimes:pdf,doc,docx', 'max:10240'], 
         ];
     }
 }

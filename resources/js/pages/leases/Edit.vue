@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
-import { Users, ArrowLeft } from 'lucide-vue-next'
+import { FileText, ArrowLeft } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -47,7 +47,7 @@ const goBack = () => history.back()
           </div>
 
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-            <Users class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <FileText class="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
       </div>

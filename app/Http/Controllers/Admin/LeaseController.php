@@ -19,7 +19,9 @@ class LeaseController extends Controller
 
     public function index()
     {
-        $leases = $this->leaseRepository->paginate();
+        $leases = $this->leaseRepository
+                ->with(['property', 'tenant'])
+                ->paginate();
 
         return Inertia::render('leases/Index', [
             'leases' => LeaseResource::collection($leases),

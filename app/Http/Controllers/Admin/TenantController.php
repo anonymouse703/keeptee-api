@@ -40,7 +40,7 @@ class TenantController extends Controller
 
     public function store(StoreRequest $request, TenantService $tenantService)
     {
-        // dd($request->all());
+        dd($request->all());
         try {
             $tenantService->create($request->validated());
         } catch (Exception $exception) {
@@ -113,5 +113,21 @@ class TenantController extends Controller
                 'type' => 'danger',
                 'message' => __('Tenant successfully deleted.'),
             ]);
+    }
+
+    public function searchTenant(Request $request)
+    {
+        $query = (string) $request->query('query', '');
+
+        if ($query === '') {
+            return response()->json([]);
+        }
+
+        $tenants = $this->tenantRepository
+            ->searchByName($query)
+            ->limit(10)
+            ->get(['id', 'name']);
+
+        return response()->json($tenants);
     }
 }

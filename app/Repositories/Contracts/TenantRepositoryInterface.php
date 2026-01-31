@@ -11,4 +11,5 @@ use App\Models\Tenant;
 interface TenantRepositoryInterface extends RepositoryInterface
 {
 	//define set of methods that TenantRepositoryInterface Repository must implement
+	public function searchByName(string $name) : static;
 }

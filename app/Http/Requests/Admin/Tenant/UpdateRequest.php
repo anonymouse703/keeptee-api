@@ -28,6 +28,8 @@ class UpdateRequest extends FormRequest
             'phone'       => 'sometimes|string|max:20',
             'lease_start' => 'sometimes|date',
             'lease_end'   => 'sometimes|date|after_or_equal:lease_start',
+            'file'        => ['nullable', 'array'],
+            'file.*'      => ['file', 'mimes:pdf,doc,docx', 'max:10240'], 
         ];
     }
 }

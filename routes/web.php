@@ -39,8 +39,6 @@ Route::middleware('auth', 'verified')->group(function () {
 
     Route::resource('email-logs', Admin\EmailLogController::class);
 
-    Route::get('leases/search-tenant', [Admin\LeaseController::class, 'searchTenant'])
-        ->name('leases.search-tenant');
     Route::resource('leases', Admin\LeaseController::class);
     Route::controller(Admin\LeaseController::class)->group(function () {
         Route::put('leases/{lease}/set-active', 'setActiveStatus')
@@ -104,6 +102,8 @@ Route::middleware('auth', 'verified')->group(function () {
             ->name('tags.toggle-status');
     });
 
+    Route::get('tenants/search-tenant', [Admin\TenantController::class, 'searchTenant'])
+        ->name('tenants.search-tenant');
     Route::resource('tenants', Admin\TenantController::class);
 
     Route::resource('users', Admin\UserController::class);

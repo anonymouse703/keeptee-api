@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
-import { Tag as TagIcon } from 'lucide-vue-next'
+import { FileText } from 'lucide-vue-next'
 import { ref, computed } from 'vue'
 
 import { Badge } from '@/components/ui/badge'
@@ -11,30 +11,30 @@ import AppLayout from '@/layouts/AppLayout.vue'
 
 import { type TagListItem } from '../../../types/type'
 
-import TagActions from './partials/Actions.vue'
+import Actions from './partials/Actions.vue'
 import SearchFilter from './partials/SearchFilter.vue'
 
 const props = defineProps({
-    tags: Object,
+    leases: Object,
 })
 
-const tagsData = computed(() => props.tags?.data ?? [])
+const leasesData = computed(() => props.leases?.data ?? [])
 
-const paginationLinks = computed(() => props.tags?.meta ?? {})
+const paginationLinks = computed(() => props.leases?.meta ?? {})
 
 const searchFilterRef = ref<InstanceType<typeof SearchFilter> | null>(null)
 
-const filteredTags = computed<TagListItem[]>(() => {
-    if (!searchFilterRef.value) return tagsData.value
+const filteredLeases = computed<TagListItem[]>(() => {
+    if (!searchFilterRef.value) return leasesData.value
 
     const filters = searchFilterRef.value.filters
-    let result = [...tagsData.value]
+    let result = [...leasesData.value]
 
     // Search
     if (filters.search) {
         const q = filters.search.toLowerCase()
-        result = result.filter(tag =>
-            tag.name.toLowerCase().includes(q)
+        result = result.filter(lease =>
+            lease.name.toLowerCase().includes(q)
         )
     }
 
@@ -74,8 +74,11 @@ const filteredTags = computed<TagListItem[]>(() => {
 })
 
 const columns = [
-    { key: 'name', label: 'Tag Name' },
-    { key: 'color', label: 'Color' },
+    { key: 'property', label: 'Property Name' },
+    { key: 'tenant', label: 'Tenant Name' },
+    { key: 'monthly_rate', label: 'Monthly Rate' },
+    { key: 'start_date', label: 'Start Date' },
+    { key: 'end_date', label: 'End Date' },
     { key: 'is_active', label: 'Status' },
 ]
 
@@ -118,34 +121,34 @@ const handleReset = () => {}
                 <div class="space-y-2">
                     <div class="flex items-center gap-3">
                         <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-emerald-500">
-                            <TagIcon class="size-5 text-white" />
+                            <FileText class="size-5 text-white" />
                         </div>
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
-                                Property Tags
+                                Property Leases
                             </h1>
                             <p class="text-gray-600 dark:text-gray-400">
-                                Organize and categorize your properties with tags
+                                Manage and organize your property leases
                             </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <Badge variant="outline" class="text-xs">
-                            {{paginationLinks.total }} tags total
+                            {{paginationLinks.total }} leases total
                         </Badge>
                         <Badge
                             variant="outline"
                             class="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                         >
-                            {{ filteredTags.length }} displayed
+                            {{ filteredLeases.length }} displayed
                         </Badge>
                     </div>
                 </div>
 
                 <div class="shrink-0">
-                    <BaseButton @click="router.visit('/tags/create')">
-                        <TagIcon class="size-4" />
-                        Add New Tag
+                    <BaseButton @click="router.visit('/leases/create')">
+                        <FileText class="size-4" />
+                        Add New Lease
                     </BaseButton>
                 </div>
             </div>
@@ -153,7 +156,7 @@ const handleReset = () => {}
             <!-- Search -->
             <SearchFilter
                 ref="searchFilterRef"
-                search-placeholder="Search tags..."
+                search-placeholder="Search leases..."
                 :status-options="statusOptions"
                 :sort-options="sortOptions"
                 :show-sort-dropdown="true"
@@ -164,33 +167,32 @@ const handleReset = () => {}
             />
 
             <!-- Data Table -->
-            <DataTable :columns="columns" :data="tagsData">
+            <DataTable :columns="columns" :data="filteredLeases">
                 <template #row-actions="{ item }">
-                    <TagActions :item="item" />
+                    <Actions :item="item" />
                 </template>
                  
-                <template #cell-color="{ item }">
-                    <div class="flex items-center gap-2">
-                        <span
-                            class="w-4 h-4 rounded-full border"
-                            :style="{ backgroundColor: item.color }"
-                        ></span>
-                        <span class="text-sm">{{ item.color }}</span>
-                    </div>
+                <template #cell-property="{ item }">
+                    {{ item.property?.title ?? '—' }}
                 </template>
 
-                <template #cell-is_active="{ item }">
+                <template #cell-tenant="{ item }">
+                    {{ item.tenant?.name ?? '—' }}
+                </template>
+
+                <template #cell-status="{ item }">
                     <span
-                        class="px-2 py-1 rounded text-xs"
-                        :class="item.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                        class="px-2 py-1 rounded text-xs font-semibold"
+                        :class="{
+                        'bg-green-100 text-green-800': item.status === 'Active',
+                        'bg-gray-100 text-gray-800': item.status === 'Ended',
+                        'bg-red-100 text-red-800': item.status === 'Terminated'
+                        }"
                     >
-                        {{ item.is_active ? 'Active' : 'Inactive' }}
+                        {{ item.status }}
                     </span>
                 </template>
-                
-                <template #cell-created_at="{ item }">
-                    {{ new Date(item.created_at).toLocaleDateString() }}
-                </template>
+
             </DataTable>
 
             <!-- Pagination -->

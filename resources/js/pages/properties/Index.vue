@@ -76,7 +76,7 @@ const columns = [
     { key: 'title', label: 'Property Title' },
     { key: 'price', label: 'Price' },
     { key: 'is_featured', label: 'Featured' },
-    { key: 'is_active', label: 'Status' },
+    { key: 'status', label: 'Status' },
 ]
 
 const statusOptions = [
