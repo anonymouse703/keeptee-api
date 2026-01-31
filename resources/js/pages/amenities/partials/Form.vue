@@ -10,7 +10,6 @@ const props = defineProps<{
   amenity?: any
 }>()
 
-
 const form = useForm({
   name: props.amenity?.name ?? '',
 })

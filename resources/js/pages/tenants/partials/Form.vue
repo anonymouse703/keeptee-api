@@ -11,6 +11,8 @@ const props = defineProps<{
   tenant?: any
 }>()
 
+console.log('Received tenant prop:', props.tenant)
+
 const formatDateForInput = (dateString: string | null): string | null => {
   if (!dateString) return null
 
@@ -30,6 +32,18 @@ const formatDateForInput = (dateString: string | null): string | null => {
   }
 }
 
+// Initialize selectedOption first
+const selectedOption = ref<{ value: number; label: string } | null>(
+  props.tenant?.property
+    ? { value: props.tenant.property_id, label: props.tenant.property.title }
+    : null
+)
+
+const originalProperty = ref<{ value: number; label: string } | null>(
+  selectedOption.value ? { ...selectedOption.value } : null
+)
+
+// Initialize form with property_id from tenant
 const form = useForm({
   name: props.tenant?.name ?? '',
   property_id: props.tenant?.property_id ?? null,
@@ -39,20 +53,9 @@ const form = useForm({
   lease_end: formatDateForInput(props.tenant?.lease_end) ?? null,
 })
 
-const today = computed(() => new Date().toISOString().split('T')[0])
-const leaseEndMin = computed(() => form.lease_start || today.value)
-const isFormValid = computed(() => form.name.trim().length > 0 && !!form.property_id)
+const leaseEndMin = computed(() => form.lease_start || null)
+
 const allErrors = computed(() => form.errors)
-
-const selectedOption = ref<{ value: number; label: string } | null>(
-  props.tenant?.property
-    ? { value: props.tenant.proterty_id, label: props.tenant.property.title }
-    : null
-)
-
-const originalProperty = ref<{ value: number; label: string } | null>(
-  selectedOption.value ? { ...selectedOption.value } : null
-)
 
 const showAsyncSelect = ref(!props.tenant?.property)
 
@@ -75,7 +78,6 @@ const handleClearProperty = () => {
 }
 
 const handleCancelPropertyChange = () => {
-
   if (originalProperty.value) {
     form.property_id = originalProperty.value.value
     selectedOption.value = { ...originalProperty.value }
@@ -85,7 +87,6 @@ const handleCancelPropertyChange = () => {
 
 const handlePropertySelect = () => {
   if (form.property_id && selectedOption.value) {
-
     originalProperty.value = { ...selectedOption.value }
     showAsyncSelect.value = false
   }
@@ -99,7 +100,25 @@ const handleKeyDown = (event: KeyboardEvent) => {
 }
 
 const handleSubmit = () => {
-  if (!isFormValid.value) return
+  // Ensure property_id is always set before submitting
+  // Priority: form.property_id > selectedOption > tenant.property_id
+  if (!form.property_id) {
+    if (selectedOption.value?.value) {
+      form.property_id = selectedOption.value.value
+    } else if (props.tenant?.property_id) {
+      form.property_id = props.tenant.property_id
+    }
+  }
+
+  // Debug logging (remove in production)
+  console.log('Submitting form with data:', {
+    property_id: form.property_id,
+    name: form.name,
+    email: form.email,
+    phone: form.phone,
+    lease_start: form.lease_start,
+    lease_end: form.lease_end
+  })
 
   if (props.tenant?.id) {
     form.put(`/tenants/${props.tenant.id}`, { preserveScroll: true })
@@ -164,13 +183,11 @@ const handleCancel = () => {
           Property <span class="text-red-500">*</span>
         </label>
 
-        <!-- Display selected property as readonly input -->
         <div v-if="!showAsyncSelect && selectedOption" class="relative">
           <input type="text"
             class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 pr-10 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
             :value="selectedOption.label" readonly />
 
-          <!-- X button to clear property -->
           <button type="button" @click="handleClearProperty"
             class="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
             title="Clear selection">
@@ -178,13 +195,11 @@ const handleCancel = () => {
           </button>
         </div>
 
-        <!-- AsyncSelect for searching/selecting property -->
         <div v-else ref="asyncSelectContainer" class="relative" @keydown="handleKeyDown" tabindex="-1">
           <AsyncSelect v-model="form.property_id" :fetchOptions="fetchProperties" :selectedOption="selectedOption"
             placeholder="Search and select a property..." :error="allErrors.property_id"
             @update:modelValue="handlePropertySelect" />
 
-          <!-- Cancel button to restore original property (shows only if there was an original property) -->
           <button v-if="originalProperty" type="button" @click="handleCancelPropertyChange"
             class="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors z-10"
             title="Cancel change (ESC)">
@@ -209,7 +224,7 @@ const handleCancel = () => {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Lease Start Date</label>
-          <BaseInput v-model="form.lease_start" type="date" :min="today" :error="allErrors.lease_start"
+          <BaseInput v-model="form.lease_start" type="date" :error="allErrors.lease_start"
             class="w-full" />
         </div>
 
@@ -226,7 +241,7 @@ const handleCancel = () => {
         Cancel
       </BaseButton>
 
-      <BaseButton type="button" @click="handleSubmit" :disabled="!isFormValid || form.processing"
+      <BaseButton type="button" @click="handleSubmit" :disabled="form.processing"
         class="bg-blue-600 text-white hover:bg-blue-700">
         {{ props.tenant ? 'Update Tenant' : 'Create Tenant' }}
       </BaseButton>

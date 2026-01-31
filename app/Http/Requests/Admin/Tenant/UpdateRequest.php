@@ -26,7 +26,7 @@ class UpdateRequest extends FormRequest
             'name'        => 'sometimes|string|max:255',
             'email'       => 'nullable|email|max:255',
             'phone'       => 'sometimes|string|max:20',
-            'lease_start' => 'sometimes|date|after_or_equal:today',
+            'lease_start' => 'sometimes|date',
             'lease_end'   => 'sometimes|date|after_or_equal:lease_start',
         ];
     }

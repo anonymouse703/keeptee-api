@@ -62,6 +62,8 @@ class AmenityController extends Controller
 
     public function update(UpdateRequest $request, Amenity $amenity)
     {
+        // dd($request->all());
+
         $payload = $request->validated();
 
         $amenity->forceFill($payload);
