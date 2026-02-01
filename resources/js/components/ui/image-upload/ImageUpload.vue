@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { Upload, Trash2, AlertCircle, ImageIcon } from 'lucide-vue-next'
+import { Upload, Trash2, AlertCircle, ImageIcon, Tag, Star } from 'lucide-vue-next'
 import BaseButton from '@/components/ui/button/BaseButton.vue'
+import BaseSelect from '@/components/ui/input/Select.vue'
+
+interface ExistingImage {
+  id: string
+  url: string
+  is_primary?: boolean
+  image_type?: string
+  sort_order?: number
+  file_id?: string
+}
 
 interface ImageFile {
   id: string
@@ -10,6 +20,7 @@ interface ImageFile {
   name: string
   size: string
   isPrimary?: boolean
+  imageType?: string
 }
 
 interface Props {
@@ -19,28 +30,45 @@ interface Props {
   label?: string
   errors?: string[]
   modelValue?: File[]
-  existingImagesCount?: number // Track how many existing images there are
+  existingImages?: ExistingImage[]
+  imageTypes?: Array<{value: string, label: string}> 
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  maxFiles: 10,
-  maxSizeMB: 5,
+  maxFiles: 15,
+  maxSizeMB: 10,
   accept: 'image/*',
   label: 'Upload Images',
   errors: () => [],
   modelValue: () => [],
-  existingImagesCount: 0
+  existingImages: () => [],
+  imageTypes: () => [] 
 })
+
+interface ImageTypeUpdate {
+  id: string
+  type: string
+}
 
 const emit = defineEmits<{
   'update:modelValue': [files: File[]]
   'update:primary': [primaryIndex: number]
+  'update:image-types': [types: ImageTypeUpdate[]]
   'remove': [index: number]
+  'remove-existing': [url: string]
 }>()
 
 const images = ref<ImageFile[]>([])
 const isDragging = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
+
+// Get default image type (first one from props or 'other')
+const getDefaultImageType = (): string => {
+  if (props.imageTypes && props.imageTypes.length > 0) {
+    return props.imageTypes[0].value
+  }
+  return 'other'
+}
 
 // Format file size
 const formatFileSize = (bytes: number): string => {
@@ -80,7 +108,7 @@ const processFiles = (files: File[]) => {
     }
     
     // Check maximum files (including existing images)
-    const totalImages = props.existingImagesCount + images.value.length + validFiles.length
+    const totalImages = props.existingImages.length + images.value.length + validFiles.length
     if (totalImages >= props.maxFiles) {
       emitError(`Maximum ${props.maxFiles} images allowed`)
       return
@@ -92,7 +120,8 @@ const processFiles = (files: File[]) => {
       preview: URL.createObjectURL(file),
       name: file.name,
       size: formatFileSize(file.size),
-      isPrimary: props.existingImagesCount === 0 && images.value.length === 0 && validFiles.length === 0
+      isPrimary: props.existingImages.length === 0 && images.value.length === 0 && validFiles.length === 0,
+      imageType: getDefaultImageType()
     }
     
     validFiles.push(imageFile)
@@ -123,22 +152,32 @@ const handleDrop = (event: DragEvent) => {
   processFiles(files)
 }
 
-// Remove image
+// Remove new image
 const removeImage = (index: number) => {
   URL.revokeObjectURL(images.value[index].preview)
   
   const wasPrimary = images.value[index].isPrimary
   images.value.splice(index, 1)
   
-  if (wasPrimary && images.value.length > 0) {
+  // If we removed a primary image and there are no existing primary images, set first image as primary
+  if (wasPrimary && !props.existingImages.some(img => img.is_primary) && images.value.length > 0) {
     images.value[0].isPrimary = true
+    emit('update:primary', 0)
   }
   
   emitFiles(images.value)
-  emit('remove', index)
+  emit('remove', index + props.existingImages.length)
 }
 
-// Remove all images
+// Remove existing image
+const removeExistingImage = (index: number) => {
+  const image = props.existingImages[index]
+  if (image) {
+    emit('remove-existing', image.url || image.id)
+  }
+}
+
+// Remove all new images
 const removeAllImages = () => {
   images.value.forEach(img => {
     URL.revokeObjectURL(img.preview)
@@ -149,16 +188,46 @@ const removeAllImages = () => {
 
 // Set primary image
 const setPrimaryImage = (index: number) => {
-  images.value.forEach((img, i) => {
-    img.isPrimary = i === index
-  })
+  // For new images
+  if (index >= props.existingImages.length) {
+    const newImageIndex = index - props.existingImages.length
+    images.value.forEach((img, i) => {
+      img.isPrimary = i === newImageIndex
+    })
+  }
+  
   emit('update:primary', index)
+}
+
+// Update image type for new images
+const updateImageType = (index: number, type: string | number | boolean | null) => {
+  const newImageIndex = index - props.existingImages.length
+  if (newImageIndex >= 0 && newImageIndex < images.value.length) {
+    const typeString = type !== null && type !== undefined 
+      ? String(type) 
+      : getDefaultImageType()
+    
+    images.value[newImageIndex].imageType = typeString
+    emitImageTypes()
+  }
 }
 
 // Emit files to parent
 const emitFiles = (files: ImageFile[]) => {
   const fileArray = files.map(img => img.file)
   emit('update:modelValue', fileArray)
+  emitImageTypes()
+}
+
+// Emit image types to parent
+const emitImageTypes = () => {
+  emit(
+    'update:image-types',
+    images.value.map(img => ({
+      id: img.id,
+      type: img.imageType || getDefaultImageType()
+    }))
+  )
 }
 
 // Emit error
@@ -176,6 +245,10 @@ onUnmounted(() => {
 // Watch for value changes from parent
 watch(() => props.modelValue, (newFiles) => {
   // Handle initial value if needed
+  // This allows parent to reset the component
+  if (newFiles && newFiles.length === 0 && images.value.length > 0) {
+    removeAllImages()
+  }
 }, { immediate: true })
 
 // Open file dialog
@@ -183,8 +256,8 @@ const openFileDialog = () => {
   inputRef.value?.click()
 }
 
-// Computed
-const totalImages = computed(() => props.existingImagesCount + images.value.length)
+// Computed properties
+const totalImages = computed(() => props.existingImages.length + images.value.length)
 const remainingSlots = computed(() => props.maxFiles - totalImages.value)
 const uploadLabel = computed(() => {
   if (totalImages.value === 0) {
@@ -192,6 +265,42 @@ const uploadLabel = computed(() => {
   }
   return `Add more images (${remainingSlots.value} remaining)`
 })
+
+// Image type summary
+const imageTypeSummary = computed(() => {
+  const summary: Record<string, { name: string; count: number }> = {}
+  
+  // Count existing images types
+  props.existingImages.forEach(img => {
+    const type = img.image_type || getDefaultImageType()
+    const typeName = props.imageTypes?.find(t => t.value === type)?.label || type
+    
+    if (!summary[type]) {
+      summary[type] = { name: typeName, count: 0 }
+    }
+    summary[type].count++
+  })
+  
+  // Count new images types
+  images.value.forEach(img => {
+    const type = img.imageType || getDefaultImageType()
+    const typeName = props.imageTypes?.find(t => t.value === type)?.label || type
+    
+    if (!summary[type]) {
+      summary[type] = { name: typeName, count: 0 }
+    }
+    summary[type].count++
+  })
+  
+  return Object.values(summary)
+})
+
+// Get human readable type name
+const getTypeName = (type: string | undefined): string => {
+  if (!type) return 'No type'
+  const found = props.imageTypes?.find(t => t.value === type)
+  return found?.label || type
+}
 </script>
 
 <template>
@@ -277,73 +386,154 @@ const uploadLabel = computed(() => {
       </div>
     </div>
 
-    <!-- Image Grid (New Images Only) -->
-    <div v-if="images.length > 0" class="space-y-4">
+    <!-- All Images Grid -->
+    <div v-if="totalImages > 0" class="space-y-4">
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-          New Images ({{ images.length }})
+          All Images ({{ totalImages }})
         </h4>
         <span class="text-xs text-gray-500 dark:text-gray-400">
           Click star to set as primary
         </span>
       </div>
       
-      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- Existing Images -->
         <div
-          v-for="(image, index) in images"
-          :key="image.id"
-          class="group relative overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+          v-for="(image, index) in existingImages"
+          :key="image.id || image.url"
+          class="group overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
         >
-          <!-- Image -->
-          <div class="aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
+          <!-- Image Container -->
+          <div class="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
+            <img
+              :src="image.url"
+              :alt="`Existing image ${index + 1}`"
+              class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            
+            <!-- Overlay Actions -->
+            <div class="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+              <!-- Primary button -->
+              <button
+                type="button"
+                @click.stop="setPrimaryImage(index)"
+                class="rounded-full bg-white/90 p-2 text-yellow-600 hover:bg-white"
+                :title="image.is_primary ? 'Primary Image' : 'Set as Primary'"
+              >
+                <Star class="h-4 w-4" :class="{ 'fill-yellow-600': image.is_primary }" />
+              </button>
+              <!-- Remove button -->
+              <button
+                type="button"
+                @click.stop="removeExistingImage(index)"
+                class="rounded-full bg-white/90 p-2 text-red-600 hover:bg-white"
+                title="Remove Image"
+              >
+                <Trash2 class="h-4 w-4" />
+              </button>
+            </div>
+            
+            <!-- Primary Badge -->
+            <div v-if="image.is_primary" class="absolute top-2 left-2">
+              <span class="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                <Star class="h-3 w-3" />
+                Primary
+              </span>
+            </div>
+            
+            <!-- Image Type Badge -->
+            <div v-if="image.image_type" class="absolute top-2 right-2">
+              <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                <Tag class="h-3 w-3" />
+                {{ getTypeName(image.image_type) }}
+              </span>
+            </div>
+          </div>
+          
+          <!-- Image Info -->
+          <div class="p-3 space-y-2">
+            <p class="truncate text-xs font-medium text-gray-900 dark:text-white">
+              Existing Image {{ index + 1 }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ image.image_type ? getTypeName(image.image_type) : 'No type set' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- New Images -->
+        <div
+          v-for="(image, newIndex) in images"
+          :key="image.id"
+          class="group overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+        >
+          <!-- Image Container -->
+          <div class="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
             <img
               :src="image.preview"
               :alt="image.name"
               class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
-          </div>
-          
-          <!-- Overlay Actions -->
-          <div class="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              v-if="existingImagesCount === 0"
-              type="button"
-              @click.stop="setPrimaryImage(index)"
-              class="rounded-full bg-white/90 p-2 text-yellow-600 hover:bg-white"
-              :title="image.isPrimary ? 'Primary Image' : 'Set as Primary'"
-            >
-              <svg class="h-4 w-4" :class="{ 'fill-current': image.isPrimary }" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              @click.stop="removeImage(index)"
-              class="rounded-full bg-white/90 p-2 text-red-600 hover:bg-white"
-              title="Remove Image"
-            >
-              <Trash2 class="h-4 w-4" />
-            </button>
-          </div>
-          
-          <!-- Primary Badge -->
-          <div v-if="image.isPrimary && existingImagesCount === 0" class="absolute top-2 left-2">
-            <span class="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-              <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              Primary
-            </span>
+            
+            <!-- Overlay Actions -->
+            <div class="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+              <!-- Primary button -->
+              <button
+                type="button"
+                @click.stop="setPrimaryImage(existingImages.length + newIndex)"
+                class="rounded-full bg-white/90 p-2 text-yellow-600 hover:bg-white"
+                :title="image.isPrimary ? 'Primary Image' : 'Set as Primary'"
+              >
+                <Star class="h-4 w-4" :class="{ 'fill-yellow-600': image.isPrimary }" />
+              </button>
+              <!-- Remove button -->
+              <button
+                type="button"
+                @click.stop="removeImage(newIndex)"
+                class="rounded-full bg-white/90 p-2 text-red-600 hover:bg-white"
+                title="Remove Image"
+              >
+                <Trash2 class="h-4 w-4" />
+              </button>
+            </div>
+            
+            <!-- Primary Badge -->
+            <div v-if="image.isPrimary" class="absolute top-2 left-2">
+              <span class="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                <Star class="h-3 w-3" />
+                Primary
+              </span>
+            </div>
           </div>
           
           <!-- Image Info -->
-          <div class="p-3">
+          <div class="p-3 space-y-2">
+            <!-- Filename -->
             <p class="truncate text-xs font-medium text-gray-900 dark:text-white">
               {{ image.name }}
             </p>
+            
+            <!-- File size -->
             <p class="text-xs text-gray-500 dark:text-gray-400">
               {{ image.size }}
             </p>
+            
+            <!-- Image Type Selector using BaseSelect -->
+            <div class="pt-2">
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Tag class="inline-block h-3 w-3 mr-1" />
+                Image Type
+              </label>
+              <BaseSelect
+                :model-value="image.imageType || getDefaultImageType()"
+                @update:model-value="(value) => updateImageType(existingImages.length + newIndex, value)"
+                :options="imageTypes || []"
+                placeholder="Select image type"
+                size="sm"
+                class="w-full"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -354,16 +544,31 @@ const uploadLabel = computed(() => {
           <div class="flex items-center gap-2">
             <ImageIcon class="h-4 w-4 text-gray-400" />
             <span class="text-sm text-gray-600 dark:text-gray-400">
-              {{ images.length }} new image{{ images.length !== 1 ? 's' : '' }} selected
+              {{ totalImages }} image{{ totalImages !== 1 ? 's' : '' }} total
+              <span v-if="existingImages.length > 0" class="text-gray-400">
+                ({{ existingImages.length }} existing, {{ images.length }} new)
+              </span>
             </span>
           </div>
           <button
+            v-if="images.length > 0"
             type="button"
             @click="removeAllImages"
             class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
           >
-            Remove All
+            Remove All New
           </button>
+        </div>
+        
+        <!-- Image Types Summary -->
+        <div v-if="imageTypeSummary.length > 0" class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex flex-wrap gap-2">
+            <span v-for="type in imageTypeSummary" :key="type.name" 
+                  class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+              <Tag class="h-3 w-3" />
+              {{ type.count }} {{ type.name }}
+            </span>
+          </div>
         </div>
       </div>
     </div>

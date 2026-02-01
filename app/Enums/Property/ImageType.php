@@ -2,8 +2,12 @@
 
 namespace App\Enums\Property;
 
+use App\Enums\Traits\EnumToArray;
+
 enum ImageType: string
 {
+    use EnumToArray;
+    
     case Exterior = 'exterior';
     case Interior = 'interior';
     case Kitchen = 'kitchen';

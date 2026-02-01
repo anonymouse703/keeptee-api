@@ -2,8 +2,12 @@
 
 namespace App\Enums\Tenant;
 
+use App\Enums\Traits\EnumToArray;
+
 enum DocumentType: string
 {
+    use EnumToArray;
+    
     case Lease = 'lease_contract';
     case GovernmentId = 'government_id';
     case ProofOfIncome = 'proof_of_income';

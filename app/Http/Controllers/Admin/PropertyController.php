@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use Exception;
 use Inertia\Inertia;
+use Nette\Utils\Image;
 use App\Models\Property;
 use Illuminate\Http\Request;
 use App\Models\PropertyImage;
 use App\Enums\Property\Status;
+use App\Enums\Property\ImageType;
 use Illuminate\Support\Facades\DB;
 use App\Enums\Property\PropertyType;
 use App\Http\Controllers\Controller;
@@ -39,6 +41,7 @@ class PropertyController extends Controller
         return Inertia::render('properties/Create', [
             'property_types' => PropertyType::collection(),
             'statuses' => Status::collection(),
+            'image_types' => ImageType::collection(),
         ]);
     }
 
@@ -101,6 +104,7 @@ class PropertyController extends Controller
             'property' => new PropertyResource($property),
             'property_types' => PropertyType::collection(),
             'statuses' => Status::collection(),
+            'image_types' => ImageType::collection(),
         ]);
     }
 
