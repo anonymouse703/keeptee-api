@@ -2,81 +2,48 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use App\Enums\Property\ImageType; 
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class PropertyImage extends Model
+class PropertyImage extends Pivot
 {
+    protected $table = 'property_images';
+
+    public $incrementing = false;
+
+    public $timestamps = false; 
+
     protected $fillable = [
         'property_id',
-        'path',
-        'thumbnail_path',
-        'disk',
-        'name',
-        'size',
-        'type',
-        'extension',
+        'file_id',
         'is_primary',
         'sort_order',
-        'width',
-        'height',
+        'image_type',
     ];
 
     protected $casts = [
         'is_primary' => 'boolean',
         'sort_order' => 'integer',
-        'size' => 'integer',
-        'width' => 'integer',
-        'height' => 'integer',
+        'image_type' => ImageType::class,
     ];
-
-     /**
-     * Relationship: PropertyImage belongs to a Property
-     */
 
     public function property()
     {
         return $this->belongsTo(Property::class);
     }
 
-     /**
-     * Accessor: Get full URL for image_url attribute
-     */
-    public function getImageUrlAttribute(): string
+    public function file()
     {
-        return Storage::disk($this->disk)->url($this->path);
+        return $this->belongsTo(File::class);
     }
 
-    /**
-     * Accessor: Get full URL for thumbnail_url attribute
-     */
-    public function getThumbnailUrlAttribute(): ?string
+    public function scopePrimary($query)
     {
-        if (!$this->thumbnail_path) {
-            return null;
-        }
-        
-        return Storage::disk($this->disk)->url($this->thumbnail_path);
+        return $query->where('is_primary', true);
     }
 
-    /**
-     * Get human-readable file size
-     */
-    public function getFormattedSizeAttribute(): string
+    public function scopeOrdered($query)
     {
-        if (!$this->size) {
-            return 'Unknown';
-        }
-        
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $size = $this->size;
-        $unit = 0;
-        
-        while ($size >= 1024 && $unit < count($units) - 1) {
-            $size /= 1024;
-            $unit++;
-        }
-        
-        return round($size, 2) . ' ' . $units[$unit];
+        return $query->orderBy('sort_order');
     }
 }

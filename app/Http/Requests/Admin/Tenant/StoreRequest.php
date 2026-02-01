@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin\Tenant;
 
+use Illuminate\Validation\Rule;
+use App\Enums\Tenant\DocumentType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRequest extends FormRequest
@@ -30,6 +32,8 @@ class StoreRequest extends FormRequest
             'lease_end'   => 'required|date|after_or_equal:lease_start',
             'file'        => ['nullable', 'array'],
             'file.*'      => ['file', 'mimes:pdf,doc,docx', 'max:10240'], 
+            'document_type'    => ['nullable', 'array'], 
+            'document_type.*'  => ['nullable', Rule::enum(DocumentType::class)],
         ];
     }
 }

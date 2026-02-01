@@ -3,159 +3,165 @@
 namespace App\Services\PropertyImages;
 
 use App\Models\Property;
-use Illuminate\Support\Str;
-use App\Models\PropertyImage;
-use Illuminate\Http\UploadedFile;
+use App\Models\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use App\Services\Uploader\ImageUploadService;
-use Intervention\Image\Laravel\Facades\Image;
+use App\Services\FileUploader\Uploaders\PropertyImageUploader;
+use Illuminate\Support\Facades\Auth;
 
 class PropertyImageService
 {
-    public function __construct(
-        protected ImageUploadService $imageUploadService
-    ) {}
-
     /**
-     * Store property images with detailed metadata
+     * Store property images using pivot table approach
      */
-    public function store(Property $property, array $images, ?int $primaryIndex = null): void
+    public function store(Property $property, array $images, ?int $primaryIndex = null, array $imageTypes = []): void
     {
-        $disk = config('filesystems.default');
+        $fileData = [];
 
         foreach ($images as $index => $image) {
-            /** @var UploadedFile $image */
+            try {
+                // Upload image using PropertyImageUploader (creates record in files table)
+                $fileId = PropertyImageUploader::uploadImage($image, Auth::user());
 
-            // Upload original image
-            $path = $this->imageUploadService->upload($image, 'properties/' . $property->id);
+                // Prepare pivot data
+                $fileData[$fileId] = [
+                    'is_primary' => $primaryIndex !== null ? ($index === $primaryIndex) : ($index === 0),
+                    'sort_order' => $index,
+                    'image_type' => $imageTypes[$index] ?? null,
+                ];
+            } catch (\Exception $e) {
+                Log::error('Failed to upload property image', [
+                    'property_id' => $property->id,
+                    'image_name' => $image->getClientOriginalName(),
+                    'error' => $e->getMessage(),
+                ]);
+                // Continue with other images
+            }
+        }
 
-            // Generate thumbnail
-            $thumbnailPath = $this->generateThumbnail($image, $property->id, $disk);
-
-            // Get dimensions
-            $dimensions = $this->getImageDimensions($image);
-
-            $property->images()->create([
-                'path' => $path,
-                'thumbnail_path' => $thumbnailPath,
-                'disk' => $disk,
-                'name' => $image->getClientOriginalName(),
-                'size' => $image->getSize(),
-                'type' => $image->getMimeType(),
-                'extension' => $image->getClientOriginalExtension(),
-                'width' => $dimensions['width'] ?? null,
-                'height' => $dimensions['height'] ?? null,
-                'is_primary' => $primaryIndex !== null ? ($index === $primaryIndex) : ($index === 0),
-                'sort_order' => $index + 1,
-            ]);
+        // Attach images to property via pivot table
+        if (!empty($fileData)) {
+            $property->images()->attach($fileData);
         }
     }
 
     /**
-     * Update existing images (reorder, change primary, etc.)
+     * Update property images
      */
-    public function update(Property $property, array $data): void
-    {
-        if (isset($data['primary_image_id'])) {
-            $property->images()->update(['is_primary' => false]);
-            $property->images()->where('id', $data['primary_image_id'])->update(['is_primary' => true]);
+    public function update(
+        Property $property,
+        array $newImages = [],
+        array $deleteFileIds = [],
+        ?int $primaryImageId = null,
+        array $imageTypes = []
+    ): void {
+        // Delete specified images
+        if (!empty($deleteFileIds)) {
+            $this->deleteImages($property, $deleteFileIds);
         }
 
-        if (isset($data['sort_order'])) {
-            foreach ($data['sort_order'] as $imageId => $order) {
-                $property->images()->where('id', $imageId)->update(['sort_order' => $order]);
+        // Upload new images
+        if (!empty($newImages)) {
+            $existingCount = $property->images()->count();
+            $fileData = [];
+
+            foreach ($newImages as $index => $image) {
+                try {
+                    $fileId = PropertyImageUploader::uploadImage($image, Auth::user());
+
+                    $fileData[$fileId] = [
+                        'is_primary' => false, // Will set primary separately if needed
+                        'sort_order' => $existingCount + $index,
+                        'image_type' => $imageTypes[$index] ?? null,
+                    ];
+                } catch (\Exception $e) {
+                    Log::error('Failed to upload property image', [
+                        'property_id' => $property->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if (!empty($fileData)) {
+                $property->images()->attach($fileData);
+            }
+        }
+
+        // Update primary image
+        if ($primaryImageId) {
+            $this->setPrimaryImage($property, $primaryImageId);
+        }
+    }
+
+    /**
+     * Delete images from property
+     */
+    protected function deleteImages(Property $property, array $fileIds): void
+    {
+        // Detach from property
+        $property->images()->detach($fileIds);
+
+        // Delete files from storage if not used elsewhere
+        foreach ($fileIds as $fileId) {
+            $file = File::find($fileId);
+
+            if ($file && !$file->properties()->exists() && !$file->tenants()->exists()) {
+                // File is not used by any property or tenant, safe to delete
+                Storage::disk($file->disk)->delete($file->path);
+
+                if ($file->thumbnail_path) {
+                    Storage::disk($file->disk)->delete($file->thumbnail_path);
+                }
+
+                $file->delete();
             }
         }
     }
 
     /**
-     * Delete a property image and its files
+     * Delete multiple images (alias for backward compatibility)
      */
-    public function delete(PropertyImage $image): void
+    public function deleteMultiple(array $fileIds): void
     {
-        $this->imageUploadService->delete($image->path);
-
-        if ($image->thumbnail_path) {
-            $this->imageUploadService->delete($image->thumbnail_path);
-        }
-
-        $image->delete();
-    }
-
-    /**
-     * Delete multiple images
-     */
-    public function deleteMultiple(array $imageIds): void
-    {
-        $images = PropertyImage::whereIn('id', $imageIds)->get();
-
-        foreach ($images as $image) {
-            $this->delete($image);
-        }
-    }
-
-    /**
-     * Generate thumbnail for a given image
-     * Uses Intervention Image 3.x syntax
-     */
-    protected function generateThumbnail(UploadedFile $image, int $propertyId, string $disk): ?string
-    {
-        try {
-            // Read the image using Intervention Image 3.x
-            $img = Image::read($image->getRealPath());
-
-            // Cover crops to exact 300x300 (good for property thumbnails)
-            // Alternative: use ->scale(width: 300) to maintain aspect ratio
-            $img->cover(300, 300);
-
-            // Generate unique filename - force .jpg for consistency and smaller size
-            $filename = Str::uuid() . '_thumb.jpg';
-            $thumbnailPath = "properties/{$propertyId}/thumbnails/{$filename}";
-
-            // Encode as JPEG with 85% quality for optimal file size/quality ratio
-            $encodedImage = $img->toJpeg(85);
-
-            // Save to storage
-            Storage::disk($disk)->put($thumbnailPath, $encodedImage);
-
-            return $thumbnailPath;
-        } catch (\Exception $e) {
-            Log::error('Thumbnail generation failed: ' . $e->getMessage(), [
-                'property_id' => $propertyId,
-                'original_image' => $image->getClientOriginalName(),
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Get image dimensions
-     */
-    protected function getImageDimensions(UploadedFile $image): array
-    {
-        try {
-            $imageInfo = getimagesize($image->getRealPath());
-            return [
-                'width' => $imageInfo[0] ?? null,
-                'height' => $imageInfo[1] ?? null,
-            ];
-        } catch (\Exception $e) {
-            Log::warning('Failed to get image dimensions: ' . $e->getMessage());
-            return ['width' => null, 'height' => null];
+        // Find which properties these files belong to
+        $files = File::whereIn('id', $fileIds)->get();
+        
+        foreach ($files as $file) {
+            $properties = $file->properties;
+            
+            foreach ($properties as $property) {
+                $this->deleteImages($property, [$file->id]);
+            }
         }
     }
 
     /**
      * Set a specific image as primary
      */
-    public function setPrimary(PropertyImage $image): void
+    public function setPrimaryImage(Property $property, int $fileId): void
     {
-        // Reset all images for this property to non-primary
-        $image->property->images()->update(['is_primary' => false]);
+        // Remove primary flag from all images
+        $allFileIds = $property->images()->pluck('files.id')->toArray();
         
-        // Set this image as primary
-        $image->update(['is_primary' => true]);
+        if (!empty($allFileIds)) {
+            $property->images()->updateExistingPivot($allFileIds, ['is_primary' => false]);
+        }
+
+        // Set new primary image
+        $property->images()->updateExistingPivot($fileId, ['is_primary' => true]);
+    }
+
+    /**
+     * Set a specific image as primary (using File model)
+     */
+    public function setPrimary(File $file): void
+    {
+        // Get the property this file belongs to
+        $property = $file->properties()->first();
+        
+        if ($property) {
+            $this->setPrimaryImage($property, $file->id);
+        }
     }
 
     /**
@@ -163,33 +169,33 @@ class PropertyImageService
      */
     public function reorder(Property $property, array $order): void
     {
-        foreach ($order as $imageId => $sortOrder) {
-            $property->images()
-                ->where('id', $imageId)
-                ->update(['sort_order' => $sortOrder]);
+        foreach ($order as $fileId => $sortOrder) {
+            $property->images()->updateExistingPivot($fileId, ['sort_order' => $sortOrder]);
         }
     }
 
     /**
-     * Bulk update - change multiple images' primary status and sort order at once
+     * Bulk update - change multiple images' metadata at once
      */
     public function bulkUpdate(Property $property, array $updates): void
     {
-        foreach ($updates as $imageId => $data) {
+        foreach ($updates as $fileId => $data) {
             $updateData = [];
-            
+
             if (isset($data['is_primary'])) {
                 $updateData['is_primary'] = $data['is_primary'];
             }
-            
+
             if (isset($data['sort_order'])) {
                 $updateData['sort_order'] = $data['sort_order'];
             }
-            
+
+            if (isset($data['image_type'])) {
+                $updateData['image_type'] = $data['image_type'];
+            }
+
             if (!empty($updateData)) {
-                $property->images()
-                    ->where('id', $imageId)
-                    ->update($updateData);
+                $property->images()->updateExistingPivot($fileId, $updateData);
             }
         }
     }
@@ -197,10 +203,10 @@ class PropertyImageService
     /**
      * Get primary image for a property
      */
-    public function getPrimaryImage(Property $property): ?PropertyImage
+    public function getPrimaryImage(Property $property): ?File
     {
         return $property->images()
-            ->where('is_primary', true)
+            ->wherePivot('is_primary', true)
             ->first();
     }
 
@@ -210,7 +216,26 @@ class PropertyImageService
     public function getOrderedImages(Property $property): \Illuminate\Database\Eloquent\Collection
     {
         return $property->images()
-            ->orderBy('sort_order')
+            ->orderByPivot('sort_order')
+            ->get();
+    }
+
+    /**
+     * Update image type
+     */
+    public function updateImageType(Property $property, int $fileId, string $imageType): void
+    {
+        $property->images()->updateExistingPivot($fileId, ['image_type' => $imageType]);
+    }
+
+    /**
+     * Get images by type
+     */
+    public function getImagesByType(Property $property, string $imageType): \Illuminate\Database\Eloquent\Collection
+    {
+        return $property->images()
+            ->wherePivot('image_type', $imageType)
+            ->orderByPivot('sort_order')
             ->get();
     }
 }

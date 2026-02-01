@@ -30,23 +30,27 @@ class Property extends Model
         'is_active',
     ];
 
-    /* =======================
-       Relationships
-    ======================== */
 
     public function owner() : BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function images() : HasMany
+    public function images()
     {
-        return $this->hasMany(PropertyImage::class);
+        return $this->belongsToMany(File::class, 'property_images')
+                    ->using(PropertyImage::class)
+                    ->withPivot('is_primary', 'sort_order', 'image_type')
+                    ->orderByPivot('sort_order');
     }
 
-    public function primaryImage() : HasOne
+    public function primaryImage()
     {
-        return $this->hasOne(PropertyImage::class)->where('is_primary', true);
+        return $this->belongsToMany(File::class, 'property_images')
+                    ->using(PropertyImage::class)
+                    ->withPivot('is_primary', 'sort_order', 'image_type')
+                    ->wherePivot('is_primary', true)
+                    ->first();
     }
 
     public function amenities() : BelongsToMany
@@ -69,9 +73,10 @@ class Property extends Model
         return $this->hasMany(Review::class);
     }
 
-    /* =======================
-       Query Scopes (SEARCH)
-    ======================== */
+    public function propertyImages()
+    {
+        return $this->hasMany(PropertyImage::class)->ordered();
+    }
 
     public function scopeActive($query)
     {

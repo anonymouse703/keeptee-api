@@ -23,7 +23,7 @@ class UpdateRequest extends FormRequest
     {
         return [
             'title'          => 'sometimes|string|max:255',
-            'description'    => 'sometimes|string|nullable',
+            'description'    => 'nullable|string',
             'status'         => 'sometimes|in:for_sale,for_rent,sold,rented,available',
             'property_type'  => 'sometimes|string|max:100',
             'price'          => 'sometimes|numeric|min:0',
@@ -32,12 +32,40 @@ class UpdateRequest extends FormRequest
             'floor_area'     => 'sometimes|numeric|min:0',
             'address'        => 'sometimes|string|max:500',
             'city'           => 'sometimes|string|max:100',
-            'state'          => 'sometimes|string|max:100|nullable',
+            'state'          => 'nullable|string|max:100',
             'country'        => 'sometimes|string|max:100',
-            'latitude'       => 'sometimes|numeric|between:-90,90',
-            'longitude'      => 'sometimes|numeric|between:-180,180',
-            'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            'latitude'       => 'nullable|numeric|between:-90,90',
+            'longitude'      => 'nullable|numeric|between:-180,180',
+            
+            'images'         => 'nullable|array|max:10',
+            'images.*'       => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            
+            'image_types'    => 'nullable|array',
+            'image_types.*'  => 'nullable|string|in:exterior,interior,kitchen,bathroom,bedroom,floor_plan,amenity,other',
+            
+            'delete_images'  => 'nullable|array',
+            'delete_images.*' => 'integer|exists:files,id',
+            
+            'update_images'         => 'nullable|array',
+            'update_images.*.id'    => 'required|integer|exists:files,id',
+            'update_images.*.is_primary' => 'nullable|boolean',
+            'update_images.*.sort_order' => 'nullable|integer|min:0',
+            'update_images.*.image_type' => 'nullable|string|in:exterior,interior,kitchen,bathroom,bedroom,floor_plan,amenity,other',
+            
+            'primary_image_id' => 'nullable|integer|exists:files,id',
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     */
+    public function messages(): array
+    {
+        return [
+            'images.*.image' => 'Each file must be an image.',
+            'images.*.mimes' => 'Images must be in JPG, JPEG, PNG, or WEBP format.',
+            'images.*.max' => 'Each image must not exceed 2MB.',
+            'delete_images.*.exists' => 'One or more images to delete do not exist.',
         ];
     }
 }

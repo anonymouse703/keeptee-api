@@ -48,21 +48,21 @@ class PropertyController extends Controller
 
         try {
             $data = collect($request->validated())
-                ->except('images')
+                ->except(['images', 'image_types', 'primary_image_index'])
                 ->toArray();
 
             $property = new Property();
-
             $property->forceFill($data);
-
             $property->owner_id = Auth::id();
             $property->is_active = true;
             $property->is_featured = true;
 
             $this->propertyRepository->save($property);
 
+            // Handle image uploads
             if ($request->hasFile('images')) {
-                $imageService->store($property, $request->file('images'));
+                $imageTypes = $request->input('image_types', []);
+                $imageService->store($property, $request->file('images'), $imageTypes);
             }
 
             DB::commit();
@@ -70,7 +70,9 @@ class PropertyController extends Controller
             DB::rollBack();
             report($exception);
 
-            return back()->withErrors(__('Failed to create property.'));
+            return back()
+                ->withInput()
+                ->withErrors(__('Failed to create property.'));
         }
 
         return redirect()
@@ -102,16 +104,34 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function update(UpdateRequest $request, Property $property)
+    public function update(UpdateRequest $request, Property $property, PropertyImageService $imageService)
     {
-        $payload = $request->validated();
-
-        $property->forceFill($payload);
+        DB::beginTransaction();
 
         try {
+            $data = collect($request->validated())
+                ->except(['images', 'delete_images', 'primary_image_id'])
+                ->toArray();
+
+            $property->forceFill($data);
             $this->propertyRepository->save($property);
-        } catch (Exception $exception) {
+
+            // Handle images
+            $imageService->update(
+                $property,
+                $request->file('images', []),
+                $request->input('delete_images', []),
+                $request->input('primary_image_id')
+            );
+
+            DB::commit();
+        } catch (\Throwable $exception) {
+            DB::rollBack();
             report($exception);
+
+            return back()
+                ->withInput()
+                ->withErrors(__('Failed to update property.'));
         }
 
         return redirect()
@@ -180,7 +200,7 @@ class PropertyController extends Controller
 
     public function destroyImage(PropertyImage $image, PropertyImageService $imageService)
     {
-        $imageService->delete($image);
+        $imageService->deleteMultiple([$image->id]);
 
         return back()->with('flash', [
             'type' => 'success',

@@ -19,7 +19,6 @@ return new class extends Migration
                 $table->string('phone')->nullable();
                 $table->date('lease_start')->nullable();
                 $table->date('lease_end')->nullable();
-                $table->unsignedBigInteger('file_id')->nullable();
             $table->timestamps();
         });
     }

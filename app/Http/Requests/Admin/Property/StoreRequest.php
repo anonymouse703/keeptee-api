@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Admin\Property;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use App\Enums\Property\ImageType; // If you created this enum
 
 class StoreRequest extends FormRequest
 {
@@ -36,8 +38,26 @@ class StoreRequest extends FormRequest
             'country'        => 'required|string|max:100',
             'latitude'       => 'nullable|numeric|between:-90,90',
             'longitude'      => 'nullable|numeric|between:-180,180',
-            'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            
+            'images'         => 'nullable|array',
+            'images.*'       => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            
+            'image_types'    => 'nullable|array',
+            'image_types.*'  => ['nullable', Rule::enum(ImageType::class)],
+            
+            'primary_image_index' => 'nullable|integer|min:0', 
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     */
+    public function messages(): array
+    {
+        return [
+            'images.*.image' => 'Each file must be an image.',
+            'images.*.mimes' => 'Images must be in JPG, JPEG, PNG, or WEBP format.',
+            'images.*.max' => 'Each image must not exceed 2MB.',
         ];
     }
 }
