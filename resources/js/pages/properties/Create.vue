@@ -11,6 +11,7 @@ const props = defineProps<{
   property_types?: any
   statuses?: any
   image_types?: { key: string; label: string }[]
+  amenities : object 
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -51,7 +52,7 @@ const goBack = () => history.back()
         </div>
       </div>
       <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-         <Form :image_types="props.image_types" :property_types="props.property_types" :statuses="props.statuses" />
+         <Form :image_types="props.image_types" :property_types="props.property_types" :statuses="props.statuses" :amenities="props.amenities" />
       </div>
     </div>
   </AppLayout>

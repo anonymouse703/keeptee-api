@@ -36,12 +36,10 @@ class Property extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function images()
+    public function images(): BelongsToMany
     {
-        return $this->belongsToMany(File::class, 'property_images')
-                    ->using(PropertyImage::class)
-                    ->withPivot('is_primary', 'sort_order', 'image_type')
-                    ->orderByPivot('sort_order');
+        return $this->belongsToMany(File::class, 'property_images', 'property_id', 'file_id')
+                    ->withPivot('is_primary', 'sort_order', 'image_type');
     }
 
     public function primaryImage()
@@ -71,11 +69,6 @@ class Property extends Model
     public function reviews() : HasMany
     {
         return $this->hasMany(Review::class);
-    }
-
-    public function propertyImages()
-    {
-        return $this->hasMany(PropertyImage::class)->ordered();
     }
 
     public function scopeActive($query)

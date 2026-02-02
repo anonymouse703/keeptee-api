@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use App\Services\FileUploader\FileUploader;
 use App\Repositories\Console\GenerateRepository;
 use App\Repositories\Console\GenerateRepositoryInterface;
 
@@ -23,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->registerRepositories();
+        $this->registerFacades();
     }
 
     /**
@@ -76,5 +78,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->commands(GenerateRepository::class);
         $this->commands(GenerateRepositoryInterface::class);
+    }
+
+    protected function registerFacades(): void
+    {
+        $this->app->bind('file_uploader', fn () => new FileUploader);
     }
 }

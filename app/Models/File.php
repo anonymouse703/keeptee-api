@@ -37,9 +37,9 @@ class File extends Model
 
     public function properties()
     {
-        return $this->belongsToMany(Property::class, 'property_images')
-                    ->using(PropertyImage::class)
-                    ->withPivot('is_primary', 'sort_order', 'image_type');
+        return $this->belongsToMany(Property::class, 'property_images', 'file_id', 'property_id')
+                    ->withPivot('is_primary', 'sort_order', 'image_type')
+                    ->withTimestamps();
     }
 
     public function tenants()

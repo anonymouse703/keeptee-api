@@ -15,12 +15,14 @@ class PropertyImageResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
             'property_id' => $this->property_id,
-            'sort_order' => $this->sort_order,
-            'image_url' => $this->image_url,          
-            'thumbnail_url' => $this->thumbnail_url,  
-            'is_primary' => $this->is_primary,
+            'file_id' => $this->file_id,
+            'is_primary' => $this->is_primary,          
+            'sort_order' => $this->sort_order,  
+            'image_type' => $this->image_type,
+
+            //relationship
+            'file' => FileResource::collection($this->whenLoaded('file'))
         ];
     }
 }

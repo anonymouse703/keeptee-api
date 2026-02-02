@@ -18,6 +18,7 @@ use App\Http\Resources\Admin\PropertyResource;
 use App\Http\Requests\Admin\Property\StoreRequest;
 use App\Http\Requests\Admin\Property\StatusRequest;
 use App\Http\Requests\Admin\Property\UpdateRequest;
+use App\Models\Amenity;
 use App\Services\PropertyImages\PropertyImageService;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
 
@@ -42,6 +43,7 @@ class PropertyController extends Controller
             'property_types' => PropertyType::collection(),
             'statuses' => Status::collection(),
             'image_types' => ImageType::collection(),
+            'amenities' => Amenity::pluck('id', 'name')
         ]);
     }
 
@@ -50,8 +52,11 @@ class PropertyController extends Controller
         DB::beginTransaction();
 
         try {
+            // 1️⃣ Prepare property data
             $data = collect($request->validated())
-                ->except(['images', 'image_types', 'primary_image_index'])
+                ->except(array_filter(array_keys($request->all()), fn($key) =>
+                    str_starts_with($key, 'images') || str_starts_with($key, 'image_types') || $key === 'primary_image_index'
+                ))
                 ->toArray();
 
             $property = new Property();
@@ -62,34 +67,51 @@ class PropertyController extends Controller
 
             $this->propertyRepository->save($property);
 
-            // Handle image uploads
-            if ($request->hasFile('images')) {
-                $imageTypes = $request->input('image_types', []);
-                $imageService->store($property, $request->file('images'), $imageTypes);
+            // 2️⃣ Collect images and their types dynamically
+            $images = [];
+            $imageTypes = [];
+            $primaryIndex = $request->input('primary_image_index', 0);
+
+            foreach ($request->all() as $key => $value) {
+                if (str_starts_with($key, 'images_') && $value instanceof \Illuminate\Http\UploadedFile) {
+                    $index = (int) str_replace('images_', '', $key);
+                    $images[$index] = $value;
+                }
+                if (str_starts_with($key, 'image_types_')) {
+                    $index = (int) str_replace('image_types_', '', $key);
+                    $imageTypes[$index] = $value;
+                }
+            }
+
+            // 3️⃣ Store images via PropertyImageService
+            if (!empty($images)) {
+                // Pass associative arrays directly - service will handle sorting
+                $imageService->store($property, $images, (int) $primaryIndex, $imageTypes);
             }
 
             DB::commit();
+
+            return redirect()
+                ->route('properties.index')
+                ->with('flash', [
+                    'type' => 'success',
+                    'message' => __('Property successfully created.'),
+                ]);
+
         } catch (\Throwable $exception) {
             DB::rollBack();
             report($exception);
 
             return back()
                 ->withInput()
-                ->withErrors(__('Failed to create property.'));
+                ->withErrors(__('Failed to create property: ' . $exception->getMessage()));
         }
-
-        return redirect()
-            ->route('properties.index')
-            ->with('flash', [
-                'type' => 'success',
-                'message' => __('Property successfully created.'),
-            ]);
     }
 
 
     public function show(Property $property)
     {
-        $property->load(['images', 'owner']);
+        $property->load(['propertyImages', 'owner']);
 
         return Inertia::render('properties/Show', [
             'property' => new PropertyResource($property),
@@ -98,7 +120,9 @@ class PropertyController extends Controller
 
     public function edit(Property $property)
     {
-        $property->load(['images', 'owner']);
+        $property->load(['propertyImages', 'owner']);
+
+        dd($property);
         
         return Inertia::render('properties/Edit', [
             'property' => new PropertyResource($property),
@@ -108,25 +132,73 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function update(UpdateRequest $request, Property $property, PropertyImageService $imageService)
+    public function update( UpdateRequest $request,Property $property, PropertyImageService $imageService ) 
     {
         DB::beginTransaction();
 
         try {
             $data = collect($request->validated())
-                ->except(['images', 'delete_images', 'primary_image_id'])
+                ->except([
+                    'images',
+                    'image_types',
+                    'delete_images',
+                    'update_images',
+                    'primary_image_id',
+                ])
                 ->toArray();
 
             $property->forceFill($data);
             $this->propertyRepository->save($property);
 
-            // Handle images
-            $imageService->update(
-                $property,
-                $request->file('images', []),
-                $request->input('delete_images', []),
-                $request->input('primary_image_id')
-            );
+            if ($request->filled('delete_images')) {
+                $imageService->deleteForProperty(
+                    $property,
+                    $request->input('delete_images')
+                );
+            }
+
+            if ($request->hasFile('images')) {
+                $imageService->update(
+                    $property,
+                    $request->file('images'),
+                    [], 
+                    null,
+                    $request->input('image_types', [])
+                );
+            }
+
+            if ($request->filled('update_images')) {
+                foreach ($request->input('update_images') as $image) {
+
+                    if (isset($image['sort_order'])) {
+                        $imageService->reorder($property, [
+                            $image['id'] => $image['sort_order'],
+                        ]);
+                    }
+
+                    if (isset($image['image_type'])) {
+                        $imageService->updateImageType(
+                            $property,
+                            $image['id'],
+                            $image['image_type']
+                        );
+                    }
+
+                    if (!empty($image['is_primary'])) {
+                        $imageService->setPrimaryImage(
+                            $property,
+                            $image['id']
+                        );
+                    }
+                }
+            }
+
+            if ($request->filled('primary_image_id')) {
+                $imageService->setPrimaryImage(
+                    $property,
+                    $request->input('primary_image_id')
+                );
+            }
 
             DB::commit();
         } catch (\Throwable $exception) {

@@ -2,62 +2,54 @@
 
 namespace App\Http\Requests\Admin\Property;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Enums\Property\ImageType; // If you created this enum
+use App\Enums\Property\ImageType;
+use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            'title'          => 'required|string|max:255',
-            'description'    => 'nullable|string',
-            'status'         => 'required|in:for_sale,for_rent,sold,rented,available',
-            'property_type'  => 'required|string|max:100',
-            'price'          => 'required|numeric|min:0',
-            'bedrooms'       => 'required|integer|min:0',
-            'bathrooms'      => 'required|integer|min:0',
-            'floor_area'     => 'required|numeric|min:0',
-            'address'        => 'required|string|max:500',
-            'city'           => 'required|string|max:100',
-            'state'          => 'nullable|string|max:100',
-            'country'        => 'required|string|max:100',
-            'latitude'       => 'nullable|numeric|between:-90,90',
-            'longitude'      => 'nullable|numeric|between:-180,180',
-            
-            'images'         => 'nullable|array',
-            'images.*'       => 'image|mimes:jpg,jpeg,png,webp|max:2048',
-            
-            'image_types'    => 'nullable|array',
-            'image_types.*'  => ['nullable', Rule::enum(ImageType::class)],
-            
-            'primary_image_index' => 'nullable|integer|min:0', 
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'nullable|numeric|min:0',
+            'property_type' => 'required|string',
+            'status' => 'required|string',
+            'bedrooms' => 'nullable|integer|min:0',
+            'bathrooms' => 'nullable|integer|min:0',
+            'floor_area' => 'nullable|numeric|min:0',
+            'address' => 'required|string',
+            'city' => 'required|string',
+            'state' => 'nullable|string',
+            'country' => 'required|string',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'is_featured' => 'boolean',
+            'is_active' => 'boolean',
+            'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'image_types' => 'nullable|array|size:' . (isset($this->images) ? count($this->images) : 0),
+            'image_types.*' => ['string', Rule::in(ImageType::values())], 
+            'primary_image_index' => 'nullable|integer|min:0',
+            'delete_images' => 'nullable|array',
         ];
     }
 
-    /**
-     * Get custom messages for validator errors.
-     */
     public function messages(): array
     {
         return [
-            'images.*.image' => 'Each file must be an image.',
-            'images.*.mimes' => 'Images must be in JPG, JPEG, PNG, or WEBP format.',
-            'images.*.max' => 'Each image must not exceed 2MB.',
+            'images.*.file' => 'The uploaded file must be a valid file.',
+            'images.*.image' => 'The file must be an image (JPEG, PNG, JPG, GIF, or WebP).',
+            'images.*.mimes' => 'The image must be a JPEG, PNG, JPG, GIF, or WebP file.',
+            'images.*.max' => 'Each image must not exceed 10MB.',
+            'image_types.*.in' => 'The image type must be one of: exterior, interior, kitchen, bathroom, bedroom, floor_plan, amenity, or other.',
+            'primary_image_index.min' => 'The primary image index must be at least 0.',
         ];
     }
 }

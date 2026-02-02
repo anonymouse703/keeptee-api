@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\Property\ImageType; 
+use App\Enums\Property\ImageType;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class PropertyImage extends Pivot
@@ -27,12 +28,12 @@ class PropertyImage extends Pivot
         'image_type' => ImageType::class,
     ];
 
-    public function property()
+    public function property() : BelongsTo
     {
         return $this->belongsTo(Property::class);
     }
 
-    public function file()
+    public function file() : BelongsTo
     {
         return $this->belongsTo(File::class);
     }

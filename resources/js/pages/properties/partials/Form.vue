@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3'
+import { useForm, router } from '@inertiajs/vue3'
 import { Building2, DollarSign, Ruler, Bed, Bath, MapPin, Star, Image as ImageIcon } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
@@ -8,20 +8,15 @@ import ImageUpload from '@/components/ui/image-upload/ImageUpload.vue'
 import BaseInput from '@/components/ui/input/BaseInput.vue'
 import BaseSelect from '@/components/ui/input/Select.vue'
 
-
 const props = defineProps<{
   property?: any
   property_types?: { key: string; label: string }[]
   statuses?: { key: string; label: string }[]
   image_types?: { key: string; label: string }[]
+  amenities : object 
 }>()
 
-console.log('image types', props.image_types)
-
-const emit = defineEmits<{
-  submit: [payload: any]
-  cancel: []
-}>()
+console.log('amenities', props.amenities)
 
 const toBoolean = (value: any): boolean => {
   if (typeof value === 'boolean') return value
@@ -57,12 +52,24 @@ const form = useForm({
     ? toBoolean(props.property.is_active)
     : true,
   images: [] as File[],
-  image_types: [] as Array<{id: string, type: string}>,
+  image_types: [] as string[],
   primary_image_index: 0,
   delete_images: [] as string[] 
 })
 
 const allErrors = computed(() => form.errors)
+
+const isFormValid = computed(() => {
+  return form.title && 
+         form.property_type && 
+         form.status && 
+         form.price && 
+         form.bedrooms && 
+         form.bathrooms && 
+         form.address && 
+         form.city && 
+         form.country
+})
 
 const imageTypeOptions = computed(() => {
   if (!props.image_types) return []
@@ -71,7 +78,6 @@ const imageTypeOptions = computed(() => {
     label: type.label
   }))
 })
-
 
 const propertyTypeOptions = computed(() =>
   props.property_types?.map(i => ({ label: i.label, value: i.key })) ?? []
@@ -114,26 +120,30 @@ const parseNumberOrNull = (value: any): number | null => {
 }
 
 const handleImagesChange = (files: File[]) => {
+  console.log('Images changed:', files.length)
   images.value = files
   form.images = files
 }
 
 const handleImageTypes = (types: Array<{id: string, type: string}>) => {
+  console.log('Image types updated:', types)
   imageTypes.value = types
-  form.image_types = types
+  form.image_types = types.map(t => t.type)
 }
 
-
 const handleRemoveExistingImage = (url: string) => {
+  console.log('Removing existing image:', url)
   form.delete_images.push(url)
 }
 
 const handlePrimaryImageChange = (index: number) => {
+  console.log('Primary image changed to index:', index)
   primaryImageIndex.value = index
   form.primary_image_index = index
 }
 
 const handleImageRemove = (index: number) => {
+  console.log('Removing image at index:', index)
   if (props.property?.images && index < props.property.images.length) {
     const imageToDelete = props.property.images[index]
     form.delete_images.push(imageToDelete.url || imageToDelete.id)
@@ -142,29 +152,87 @@ const handleImageRemove = (index: number) => {
     images.value.splice(newIndex, 1)
     form.images = [...images.value]
     
-    // Remove corresponding image type
     if (imageTypes.value[newIndex]) {
       imageTypes.value.splice(newIndex, 1)
-      form.image_types = [...imageTypes.value]
+      form.image_types = imageTypes.value.map(t => t.type)
     }
   }
 }
 
 const handleSubmit = () => {
-  form.transform(data => ({
-    ...data,
-    price: parseNumberOrNull(data.price),
-    bedrooms: parseNumberOrNull(data.bedrooms),
-    bathrooms: parseNumberOrNull(data.bathrooms),
-    floor_area: parseNumberOrNull(data.floor_area),
-    latitude: parseNumberOrNull(data.latitude),
-    longitude: parseNumberOrNull(data.longitude)
-  }))
+  if (!isFormValid.value) {
+    console.error('Form validation failed')
+    return
+  }
 
-  emit('submit', form.data())
+  const formData = new FormData()
+
+  // Regular fields
+  const fields = {
+    title: form.title,
+    description: form.description,
+    owner_id: form.owner_id || '',
+    property_type: form.property_type,
+    status: form.status,
+    price: parseNumberOrNull(form.price)?.toString() || '',
+    bedrooms: parseNumberOrNull(form.bedrooms)?.toString() || '',
+    bathrooms: parseNumberOrNull(form.bathrooms)?.toString() || '',
+    floor_area: parseNumberOrNull(form.floor_area)?.toString() || '',
+    address: form.address,
+    city: form.city,
+    state: form.state || '',
+    country: form.country,
+    latitude: parseNumberOrNull(form.latitude)?.toString() || '',
+    longitude: parseNumberOrNull(form.longitude)?.toString() || '',
+    primary_image_index: form.primary_image_index.toString(),
+  }
+
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) formData.append(key, value)
+  })
+
+  // Booleans
+  formData.append('is_featured', form.is_featured ? '1' : '0')
+  formData.append('is_active', form.is_active ? '1' : '0')
+
+  // Images + image types must have same numeric indices
+  form.images.forEach((file, index) => {
+    formData.append(`images.${index}`, file)
+    formData.append(`image_types.${index}`, form.image_types[index] || 'other')
+  })
+
+  // Delete existing images
+  form.delete_images.forEach((url, index) => {
+    formData.append(`delete_images.${index}`, url)
+  })
+
+  // Determine create vs update
+  const url = props.property?.id
+    ? `/properties/${props.property.id}`
+    : '/properties'
+
+  const method = props.property?.id ? 'put' : 'post'
+
+  if (props.property?.id) formData.append('_method', 'put')
+
+  router.post(url, formData, {
+    preserveScroll: true,
+    onStart: () => console.log(`${method.toUpperCase()} started`),
+    onSuccess: () => {
+      console.log(`${method.toUpperCase()} successful`)
+      router.visit('/properties')
+    },
+    onError: (errors) => {
+      console.error(`${method.toUpperCase()} errors:`, errors)
+      form.errors = errors
+    },
+  })
 }
 
-const handleCancel = () => emit('cancel')
+
+const handleCancel = () => {
+  router.visit('/properties')
+}
 </script>
 
 <template>
@@ -176,7 +244,7 @@ const handleCancel = () => emit('cancel')
       </div>
       <div>
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-          {{ props.property?.title ? 'Edit Property' : 'Property Details' }}
+          {{ props.property?.id ? 'Edit Property' : 'Create Property' }}
         </h3>
         <p class="text-sm text-gray-500 dark:text-gray-400">
           Enter all the details about your property
@@ -211,8 +279,8 @@ const handleCancel = () => emit('cancel')
 
           <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
             <p>• Upload high-quality images (max 10MB each)</p>
-            <p>• Click on an image to set as primary</p>
-            <p>• Drag images to reorder them</p>
+            <p>• Click star icon to set as primary</p>
+            <p>• Select image type for each photo</p>
           </div>
         </div>
       </div>
@@ -367,8 +435,9 @@ const handleCancel = () => emit('cancel')
           <BaseButton type="button" variant="outline" @click="handleCancel" :disabled="form.processing">
             Cancel
           </BaseButton>
-          <BaseButton type="button" @click="handleSubmit" :disabled="form.processing">
-            {{ props.property?.title ? 'Update Property' : 'Create Property' }}
+          <BaseButton type="submit" @click="handleSubmit" :disabled="form.processing || !isFormValid">
+            <span v-if="form.processing">Processing...</span>
+            <span v-else>{{ props.property?.id ? 'Update Property' : 'Create Property' }}</span>
           </BaseButton>
         </div>
       </div>
