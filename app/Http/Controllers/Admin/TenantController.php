@@ -21,7 +21,7 @@ use App\Services\FileUploader\Uploaders\TenantFilesUploader;
 
 class TenantController extends Controller
 {
-    public function __construct(protected TenantRepositoryInterface $tenantRepository, protected FileRepositoryInterface $fileRepository)
+    public function __construct(protected TenantRepositoryInterface $tenantRepository, protected FileRepositoryInterface $fileRepository, protected TenantService $tenantService)
     {}
 
     public function index()
@@ -43,37 +43,25 @@ class TenantController extends Controller
             ]);
     }
 
-    public function store(StoreRequest $request, TenantService $tenantService)
+    public function store(StoreRequest $request)
     {
         try {
-            $validatedData = $request->validated();
-            $fileIds = [];
-            
-            if ($request->hasFile('file')) {
-                foreach ($request->file('file') as $uploadedFile) {
-                    $fileIds[] = TenantFilesUploader::uploadFile(
-                        $uploadedFile, 
-                       Auth::user()
-                    );
-                }
-                $validatedData['file_ids'] = $fileIds;
-                unset($validatedData['file']);
-            }
-            
-            $tenantService->create($validatedData);
-            
-        } catch (Exception $exception) {
-            report($exception);
-            return back()->with('flash', [
-                'type' => 'error',
-                'message' => __('Something went wrong. Please try again.'),
-            ]);
-        }
+            $this->tenantService->create($request->all());
 
-        return redirect()->route('tenants.index')->with('flash', [
-            'type' => 'success',
-            'message' => __('Tenant successfully created.'),
-        ]);
+            return redirect()
+                ->route('tenants.index')
+                ->with('flash', [
+                    'type' => 'success',
+                    'message' => __('Tenant successfully created.'),
+                ]);
+
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()
+                ->withInput()
+                ->withErrors(__('Failed to create tenant: ' . $exception->getMessage()));
+        }
     }
 
     public function show(Tenant $tenant)
