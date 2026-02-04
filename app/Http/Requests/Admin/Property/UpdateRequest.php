@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin\Property;
 
+use Illuminate\Validation\Rule;
+use App\Enums\Property\ImageType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateRequest extends FormRequest
@@ -36,23 +38,28 @@ class UpdateRequest extends FormRequest
             'country'        => 'sometimes|string|max:100',
             'latitude'       => 'nullable|numeric|between:-90,90',
             'longitude'      => 'nullable|numeric|between:-180,180',
-            
             'images'         => 'nullable|array|max:10',
             'images.*'       => 'image|mimes:jpg,jpeg,png,webp|max:2048',
-            
             'image_types'    => 'nullable|array',
-            'image_types.*'  => 'nullable|string|in:exterior,interior,kitchen,bathroom,bedroom,floor_plan,amenity,other',
-            
+            'image_types.*'  => ['string', Rule::in(ImageType::values())], 
             'delete_images'  => 'nullable|array',
             'delete_images.*' => 'integer|exists:files,id',
-            
             'update_images'         => 'nullable|array',
             'update_images.*.id'    => 'required|integer|exists:files,id',
             'update_images.*.is_primary' => 'nullable|boolean',
             'update_images.*.sort_order' => 'nullable|integer|min:0',
-            'update_images.*.image_type' => 'nullable|string|in:exterior,interior,kitchen,bathroom,bedroom,floor_plan,amenity,other',
-            
+            'update_images.*.image_type' => ['string', Rule::in(ImageType::values())], 
             'primary_image_id' => 'nullable|integer|exists:files,id',
+            'tags' => 'sometimes|array',
+            'tags.*' => [
+                'integer',
+                Rule::exists('tags', 'id'),
+            ],
+            'amenities' => 'sometimes|array',
+            'amenities.*' => [
+                'integer',
+                Rule::exists('amenities', 'id'),
+            ],
         ];
     }
 

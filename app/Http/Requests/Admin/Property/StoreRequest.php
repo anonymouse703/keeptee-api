@@ -38,6 +38,16 @@ class StoreRequest extends FormRequest
             'image_types.*' => ['string', Rule::in(ImageType::values())], 
             'primary_image_index' => 'nullable|integer|min:0',
             'delete_images' => 'nullable|array',
+            'tags' => 'nullable|array',
+            'tags.*' => [
+                'integer',
+                Rule::exists('tags', 'id'),
+            ],
+            'amenities' => 'nullable|array',
+            'amenities.*' => [
+                'integer',
+                Rule::exists('amenities', 'id'),
+            ],
         ];
     }
 

@@ -7,10 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Amenity extends Model
 {
-    protected $fillable = ['name', 'icon'];
+    protected $fillable = ['name'];
 
-    public function properties() : BelongsToMany
+       public function properties(): BelongsToMany
     {
-        return $this->belongsToMany(Property::class);
+        return $this->belongsToMany(
+            Property::class,
+            'property_amenities',
+            'amenity_id',
+            'property_id'
+        )->using(PropertyAmenity::class);
     }
 }

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use Exception;
+use App\Models\Tag;
 use Inertia\Inertia;
 use Nette\Utils\Image;
+use App\Models\Amenity;
 use App\Models\Property;
 use Illuminate\Http\Request;
 use App\Models\PropertyImage;
@@ -14,17 +16,17 @@ use Illuminate\Support\Facades\DB;
 use App\Enums\Property\PropertyType;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use App\Services\Property\PropertyService;
 use App\Http\Resources\Admin\PropertyResource;
 use App\Http\Requests\Admin\Property\StoreRequest;
 use App\Http\Requests\Admin\Property\StatusRequest;
 use App\Http\Requests\Admin\Property\UpdateRequest;
-use App\Models\Amenity;
 use App\Services\PropertyImages\PropertyImageService;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
 
 class PropertyController extends Controller
 {
-    public function __construct(protected PropertyRepositoryInterface $propertyRepository)
+    public function __construct(protected PropertyRepositoryInterface $propertyRepository,  protected PropertyService $propertyService)
     {}
 
     public function index()
@@ -43,53 +45,15 @@ class PropertyController extends Controller
             'property_types' => PropertyType::collection(),
             'statuses' => Status::collection(),
             'image_types' => ImageType::collection(),
-            'amenities' => Amenity::pluck('id', 'name')
+            'amenities' => Amenity::pluck('id', 'name'),
+            'tags' => Tag::pluck('id','name')
         ]);
     }
 
-    public function store(StoreRequest $request, PropertyImageService $imageService)
+    public function store(StoreRequest $request)
     {
-        DB::beginTransaction();
-
         try {
-            // 1️⃣ Prepare property data
-            $data = collect($request->validated())
-                ->except(array_filter(array_keys($request->all()), fn($key) =>
-                    str_starts_with($key, 'images') || str_starts_with($key, 'image_types') || $key === 'primary_image_index'
-                ))
-                ->toArray();
-
-            $property = new Property();
-            $property->forceFill($data);
-            $property->owner_id = Auth::id();
-            $property->is_active = true;
-            $property->is_featured = true;
-
-            $this->propertyRepository->save($property);
-
-            // 2️⃣ Collect images and their types dynamically
-            $images = [];
-            $imageTypes = [];
-            $primaryIndex = $request->input('primary_image_index', 0);
-
-            foreach ($request->all() as $key => $value) {
-                if (str_starts_with($key, 'images_') && $value instanceof \Illuminate\Http\UploadedFile) {
-                    $index = (int) str_replace('images_', '', $key);
-                    $images[$index] = $value;
-                }
-                if (str_starts_with($key, 'image_types_')) {
-                    $index = (int) str_replace('image_types_', '', $key);
-                    $imageTypes[$index] = $value;
-                }
-            }
-
-            // 3️⃣ Store images via PropertyImageService
-            if (!empty($images)) {
-                // Pass associative arrays directly - service will handle sorting
-                $imageService->store($property, $images, (int) $primaryIndex, $imageTypes);
-            }
-
-            DB::commit();
+            $this->propertyService->create($request->all());
 
             return redirect()
                 ->route('properties.index')
@@ -99,7 +63,6 @@ class PropertyController extends Controller
                 ]);
 
         } catch (\Throwable $exception) {
-            DB::rollBack();
             report($exception);
 
             return back()
@@ -120,102 +83,37 @@ class PropertyController extends Controller
 
     public function edit(Property $property)
     {
-        $property->load(['propertyImages', 'owner']);
-
-        dd($property);
+        $property->load(['images', 'tags', 'amenities','owner']);
         
         return Inertia::render('properties/Edit', [
             'property' => new PropertyResource($property),
             'property_types' => PropertyType::collection(),
             'statuses' => Status::collection(),
             'image_types' => ImageType::collection(),
+            'amenities' => Amenity::pluck('id', 'name'),
+            'tags' => Tag::pluck('id','name')
         ]);
     }
 
-    public function update( UpdateRequest $request,Property $property, PropertyImageService $imageService ) 
+    public function update(UpdateRequest $request, Property $property)
     {
-        DB::beginTransaction();
-
         try {
-            $data = collect($request->validated())
-                ->except([
-                    'images',
-                    'image_types',
-                    'delete_images',
-                    'update_images',
-                    'primary_image_id',
-                ])
-                ->toArray();
+            $this->propertyService->update($property, $request->all());
 
-            $property->forceFill($data);
-            $this->propertyRepository->save($property);
+            return redirect()
+                ->route('properties.index')
+                ->with('flash', [
+                    'type' => 'success',
+                    'message' => __('Property successfully updated.'),
+                ]);
 
-            if ($request->filled('delete_images')) {
-                $imageService->deleteForProperty(
-                    $property,
-                    $request->input('delete_images')
-                );
-            }
-
-            if ($request->hasFile('images')) {
-                $imageService->update(
-                    $property,
-                    $request->file('images'),
-                    [], 
-                    null,
-                    $request->input('image_types', [])
-                );
-            }
-
-            if ($request->filled('update_images')) {
-                foreach ($request->input('update_images') as $image) {
-
-                    if (isset($image['sort_order'])) {
-                        $imageService->reorder($property, [
-                            $image['id'] => $image['sort_order'],
-                        ]);
-                    }
-
-                    if (isset($image['image_type'])) {
-                        $imageService->updateImageType(
-                            $property,
-                            $image['id'],
-                            $image['image_type']
-                        );
-                    }
-
-                    if (!empty($image['is_primary'])) {
-                        $imageService->setPrimaryImage(
-                            $property,
-                            $image['id']
-                        );
-                    }
-                }
-            }
-
-            if ($request->filled('primary_image_id')) {
-                $imageService->setPrimaryImage(
-                    $property,
-                    $request->input('primary_image_id')
-                );
-            }
-
-            DB::commit();
         } catch (\Throwable $exception) {
-            DB::rollBack();
             report($exception);
 
             return back()
                 ->withInput()
-                ->withErrors(__('Failed to update property.'));
+                ->withErrors(__('Failed to update property: ' . $exception->getMessage()));
         }
-
-        return redirect()
-            ->route('properties.index')
-            ->with('flash', [
-                'type' => 'success',
-                'message' => __('Property successfully updated.'),
-            ]);
     }
 
     public function destroy(Property $property)
@@ -272,16 +170,6 @@ class PropertyController extends Controller
                 'type' => 'success', 
                 'message' => __('Property status updated successfully.'), 
             ]);
-    }
-
-    public function destroyImage(PropertyImage $image, PropertyImageService $imageService)
-    {
-        $imageService->deleteMultiple([$image->id]);
-
-        return back()->with('flash', [
-            'type' => 'success',
-            'message' => __('Image deleted successfully.'),
-        ]);
     }
 
     public function searchProperty(Request $request)

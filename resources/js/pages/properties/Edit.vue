@@ -11,6 +11,9 @@ const props = defineProps<{
   property: any
   property_types?: any
   statuses?: any
+  image_types?: { key: string; label: string }[]
+  amenities : object 
+  tags : object
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -23,7 +26,7 @@ const goBack = () => history.back()
 
 <template>
 
-  <Head :title="`Edit ${property.title}`" />
+  <Head :title="`Edit ${property.data.title}`" />
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-4">
       <div class="mb-6">
@@ -38,7 +41,7 @@ const goBack = () => history.back()
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-              Edit {{ property.title }}
+              Edit {{ property.data.title }}
             </h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Update property details and images
@@ -52,7 +55,7 @@ const goBack = () => history.back()
       </div>
 
       <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <Form :property="property" :property_types="property_types" :statuses="statuses" />
+        <Form :property="props.property" :property_types="props.property_types" :statuses="props.statuses"  :amenities="props.amenities" :tags="props.tags"/>
       </div>
     </div>
   </AppLayout>

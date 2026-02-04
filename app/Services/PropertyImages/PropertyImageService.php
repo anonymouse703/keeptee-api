@@ -31,20 +31,12 @@ class PropertyImageService
 
         foreach ($images as $index => $image) {
             try {
-                // 1. Upload image and create File record
+
                 $fileId = PropertyImageUploader::uploadImage($image, Auth::user());
-
-                Log::info('Image uploaded successfully', [
-                    'property_id' => $property->id,
-                    'file_id' => $fileId,
-                    'original_index' => $index,
-                    'sort_order' => $sortOrder
-                ]);
-
-                // 2. Prepare pivot data for property_images table
+                
                 $isPrimary = ($primaryIndex !== null) 
                     ? ($index == $primaryIndex) 
-                    : ($sortOrder === 0); // First image is primary by default
+                    : ($sortOrder === 0); 
 
                 $pivotData[$fileId] = [
                     'is_primary' => $isPrimary,
@@ -62,11 +54,9 @@ class PropertyImageService
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
                 ]);
-                // Continue with remaining images
             }
         }
 
-        // 3. Attach files to property via property_images pivot table
         if (!empty($pivotData)) {
             $property->images()->attach($pivotData);
             

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm, router } from '@inertiajs/vue3'
-import { Building2, DollarSign, Ruler, Bed, Bath, MapPin, Star, Image as ImageIcon } from 'lucide-vue-next'
+import { Building2, DollarSign, Ruler, Bed, Bath, MapPin, Star, Image as ImageIcon, TagIcon } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
 import BaseButton from '@/components/ui/button/BaseButton.vue'
@@ -13,10 +13,11 @@ const props = defineProps<{
   property_types?: { key: string; label: string }[]
   statuses?: { key: string; label: string }[]
   image_types?: { key: string; label: string }[]
-  amenities : object 
+  amenities: object
+  tags: object
 }>()
 
-console.log('amenities', props.amenities)
+console.log('edit', props.property)
 
 const toBoolean = (value: any): boolean => {
   if (typeof value === 'boolean') return value
@@ -25,36 +26,48 @@ const toBoolean = (value: any): boolean => {
   return false
 }
 
+const findPrimaryImageIndex = () => {
+  if (!props.property?.data.images) return 0
+  
+  const primaryIndex = props.property.data.images.findIndex(
+    (img: any) => img.is_primary === true
+  )
+  
+  return primaryIndex !== -1 ? primaryIndex : 0
+}
+
 const images = ref<File[]>([])
 const imageTypes = ref<Array<{id: string, type: string}>>([])
-const primaryImageIndex = ref(0)
+const primaryImageIndex = ref(findPrimaryImageIndex())
 
 const form = useForm({
-  title: props.property?.title ?? '',
-  description: props.property?.description ?? '',
-  owner_id: props.property?.owner_id ?? null,
-  price: props.property?.price != null ? String(props.property.price) : '',
-  property_type: props.property?.property_type ?? 'house',
-  status: props.property?.status ?? 'for_sale',
-  bedrooms: props.property?.bedrooms != null ? String(props.property.bedrooms) : '0',
-  bathrooms: props.property?.bathrooms != null ? String(props.property.bathrooms) : '0',
-  floor_area: props.property?.floor_area != null ? String(props.property.floor_area) : '',
-  address: props.property?.address ?? '',
-  city: props.property?.city ?? '',
-  state: props.property?.state ?? '',
-  country: props.property?.country ?? 'USA',
-  latitude: props.property?.latitude != null ? String(props.property.latitude) : '',
-  longitude: props.property?.longitude != null ? String(props.property.longitude) : '',
-  is_featured: props.property?.is_featured != null
-    ? toBoolean(props.property.is_featured)
+  title: props.property?.data.title ?? '',
+  description: props.property?.data.description ?? '',
+  owner_id: props.property?.data.owner_id ?? null,
+  price: props.property?.data.price != null ? String(props.property.data.price) : '',
+  property_type: props.property?.data.property_type ?? 'house',
+  status: props.property?.data.status ?? 'for_sale',
+  bedrooms: props.property?.data.bedrooms != null ? String(props.property.data.bedrooms) : '0',
+  bathrooms: props.property?.data.bathrooms != null ? String(props.property.data.bathrooms) : '0',
+  floor_area: props.property?.data.floor_area != null ? String(props.property.data.floor_area) : '',
+  address: props.property?.data.address ?? '',
+  city: props.property?.data.city ?? '',
+  state: props.property?.data.state ?? '',
+  country: props.property?.data.country ?? 'USA',
+  latitude: props.property?.data.latitude != null ? String(props.property.data.latitude) : '',
+  longitude: props.property?.data.longitude != null ? String(props.property.data.longitude) : '',
+  is_featured: props.property?.data.is_featured != null
+    ? toBoolean(props.property.data.is_featured)
     : false,
-  is_active: props.property?.is_active != null
-    ? toBoolean(props.property.is_active)
+  is_active: props.property?.data.is_active != null
+    ? toBoolean(props.property.data.is_active)
     : true,
+  amenities: props.property?.data.amenities?.map((a: any) => a.id) || [] as number[],
+  tags: props.property?.data.tags?.map((a: any) => a.id) || [] as number[],
   images: [] as File[],
   image_types: [] as string[],
-  primary_image_index: 0,
-  delete_images: [] as string[] 
+  primary_image_index: findPrimaryImageIndex(),
+  delete_images: [] as number[] 
 })
 
 const allErrors = computed(() => form.errors)
@@ -73,19 +86,35 @@ const isFormValid = computed(() => {
 
 const imageTypeOptions = computed(() => {
   if (!props.image_types) return []
-  return props.image_types.map(type => ({
+  return props.image_types.map((type: { key: string; label: string }) => ({
     value: type.key,
     label: type.label
   }))
 })
 
 const propertyTypeOptions = computed(() =>
-  props.property_types?.map(i => ({ label: i.label, value: i.key })) ?? []
+  props.property_types?.map((i: { key: string; label: string }) => ({ label: i.label, value: i.key })) ?? []
 )
 
 const statusOptions = computed(() =>
-  props.statuses?.map(i => ({ label: i.label, value: i.key })) ?? []
+  props.statuses?.map((i: { key: string; label: string }) => ({ label: i.label, value: i.key })) ?? []
 )
+
+const amenitiesOptions = computed(() => {
+  if (!props.amenities) return []
+  return Object.entries(props.amenities).map(([name, id]: [string, number]) => ({
+    label: name,
+    value: id
+  }))
+})
+
+const tagsOptions = computed(() => {
+  if (!props.tags) return []
+  return Object.entries(props.tags).map(([name, id]: [string, number]) => ({
+    label: name,
+    value: id
+  }))
+})
 
 const bedroomOptions = [
   { label: 'Studio', value: '0' },
@@ -128,12 +157,13 @@ const handleImagesChange = (files: File[]) => {
 const handleImageTypes = (types: Array<{id: string, type: string}>) => {
   console.log('Image types updated:', types)
   imageTypes.value = types
-  form.image_types = types.map(t => t.type)
+  form.image_types = types.map((t: {id: string, type: string}) => t.type)
 }
 
-const handleRemoveExistingImage = (url: string) => {
-  console.log('Removing existing image:', url)
-  form.delete_images.push(url)
+const handleRemoveExistingImage = (fileId: number) => {
+  if (!form.delete_images.includes(fileId)) {
+    form.delete_images.push(fileId)
+  }
 }
 
 const handlePrimaryImageChange = (index: number) => {
@@ -143,20 +173,25 @@ const handlePrimaryImageChange = (index: number) => {
 }
 
 const handleImageRemove = (index: number) => {
-  console.log('Removing image at index:', index)
-  if (props.property?.images && index < props.property.images.length) {
-    const imageToDelete = props.property.images[index]
-    form.delete_images.push(imageToDelete.url || imageToDelete.id)
+
+  if (props.property?.data.images && index < props.property.data.images.length) {
+    const imageToDelete = props.property.data.images[index]
+    const fileId = imageToDelete.file_id || imageToDelete.id
+    
+    if (!form.delete_images.includes(Number(fileId))) {
+      form.delete_images.push(Number(fileId))
+    }
   } else {
-    const newIndex = index - (props.property?.images?.length || 0)
+    const newIndex = index - (props.property?.data.images?.length || 0)
     images.value.splice(newIndex, 1)
     form.images = [...images.value]
     
     if (imageTypes.value[newIndex]) {
       imageTypes.value.splice(newIndex, 1)
-      form.image_types = imageTypes.value.map(t => t.type)
+      form.image_types = imageTypes.value.map((t: {id: string, type: string}) => t.type)
     }
   }
+
 }
 
 const handleSubmit = () => {
@@ -187,7 +222,7 @@ const handleSubmit = () => {
     primary_image_index: form.primary_image_index.toString(),
   }
 
-  Object.entries(fields).forEach(([key, value]) => {
+  Object.entries(fields).forEach(([key, value]: [string, string | null]) => {
     if (value !== null && value !== undefined) formData.append(key, value)
   })
 
@@ -196,24 +231,35 @@ const handleSubmit = () => {
   formData.append('is_active', form.is_active ? '1' : '0')
 
   // Images + image types must have same numeric indices
-  form.images.forEach((file, index) => {
+    form.images.forEach((file: File, index: number) => {
     formData.append(`images.${index}`, file)
     formData.append(`image_types.${index}`, form.image_types[index] || 'other')
   })
 
   // Delete existing images
-  form.delete_images.forEach((url, index) => {
-    formData.append(`delete_images.${index}`, url)
+  form.delete_images.forEach((fileId: number, index: number) => {
+    formData.append(`delete_images[${index}]`, fileId.toString())
+  })
+
+
+  // Add amenities
+  form.amenities.forEach((amenityId: number, index: number) => {
+    formData.append(`amenities.${index}`, amenityId.toString())
+  })
+
+  //Add tags
+  form.tags.forEach((tagId: number, index: number) => {
+    formData.append(`tags.${index}`, tagId.toString())
   })
 
   // Determine create vs update
-  const url = props.property?.id
-    ? `/properties/${props.property.id}`
+  const url = props.property?.data.id
+    ? `/properties/${props.property.data.id}`
     : '/properties'
 
-  const method = props.property?.id ? 'put' : 'post'
+  const method = props.property?.data.id ? 'put' : 'post'
 
-  if (props.property?.id) formData.append('_method', 'put')
+  if (props.property?.data.id) formData.append('_method', 'put')
 
   router.post(url, formData, {
     preserveScroll: true,
@@ -228,7 +274,6 @@ const handleSubmit = () => {
     },
   })
 }
-
 
 const handleCancel = () => {
   router.visit('/properties')
@@ -266,7 +311,7 @@ const handleCancel = () => {
 
           <ImageUpload
             v-model="images"
-            :existing-images="props.property?.images || []"
+            :existing-images="props.property?.data.images || []"
             :image-types="imageTypeOptions"
             :max-files="15"
             :max-size-mb="10"
@@ -430,6 +475,92 @@ const handleCancel = () => {
           </div>
         </div>
 
+        <!-- Amenities Section -->
+        <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
+          <div class="flex items-center gap-3 pb-4 mb-4 border-b border-gray-200 dark:border-gray-800">
+            <Building2 class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Amenities
+            </h3>
+          </div>
+          
+          <div v-if="amenitiesOptions.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div v-for="amenity in amenitiesOptions" :key="amenity.value" class="flex items-center">
+              <input
+                :id="`amenity-${amenity.value}`"
+                v-model="form.amenities"
+                type="checkbox"
+                :value="amenity.value"
+                :class="[
+                  'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-blue-500',
+                  allErrors.amenities ? 'border-red-500' : ''
+                ]"
+              />
+              <label
+                :for="`amenity-${amenity.value}`"
+                class="ml-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+              >
+                {{ amenity.label }}
+              </label>
+            </div>
+          </div>
+          <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400">
+            No amenities available
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+            <p>• Select all amenities that apply to this property</p>
+          </div>
+          
+          <!-- Error message -->
+          <div v-if="allErrors.amenities" class="mt-2 text-sm text-red-600 dark:text-red-400">
+            {{ allErrors.amenities }}
+          </div>
+        </div>
+
+        <!-- Tags Section -->
+        <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
+          <div class="flex items-center gap-3 pb-4 mb-4 border-b border-gray-200 dark:border-gray-800">
+            <TagIcon class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Tags
+            </h3>
+          </div>
+          
+          <div v-if="tagsOptions.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div v-for="tag in tagsOptions" :key="tag.value" class="flex items-center">
+              <input
+                :id="`tag-${tag.value}`"
+                v-model="form.tags"
+                type="checkbox"
+                :value="tag.value"
+                :class="[
+                  'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-blue-500',
+                  allErrors.tags ? 'border-red-500' : ''
+                ]"
+              />
+              <label
+                :for="`tag-${tag.value}`"
+                class="ml-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+              >
+                {{ tag.label }}
+              </label>
+            </div>
+          </div>
+          <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400">
+            No tags available
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+            <p>• Select all tags that apply to this property</p>
+          </div>
+          
+          <!-- Error message -->
+          <div v-if="allErrors.amenities" class="mt-2 text-sm text-red-600 dark:text-red-400">
+            {{ allErrors.tags }}
+          </div>
+        </div>
+
         <!-- Actions -->
         <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
           <BaseButton type="button" variant="outline" @click="handleCancel" :disabled="form.processing">
@@ -437,7 +568,7 @@ const handleCancel = () => {
           </BaseButton>
           <BaseButton type="submit" @click="handleSubmit" :disabled="form.processing || !isFormValid">
             <span v-if="form.processing">Processing...</span>
-            <span v-else>{{ props.property?.id ? 'Update Property' : 'Create Property' }}</span>
+            <span v-else>{{ props.property?.data.id ? 'Update Property' : 'Create Property' }}</span>
           </BaseButton>
         </div>
       </div>
