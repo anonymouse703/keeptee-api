@@ -17,8 +17,6 @@ const props = defineProps<{
   tags: object
 }>()
 
-console.log('edit', props.property)
-
 const toBoolean = (value: any): boolean => {
   if (typeof value === 'boolean') return value
   if (typeof value === 'number') return value === 1
@@ -34,6 +32,16 @@ const findPrimaryImageIndex = () => {
   )
   
   return primaryIndex !== -1 ? primaryIndex : 0
+}
+
+const findPrimaryImageFileId = () => {
+  if (!props.property?.data.images) return null
+  
+  const primaryImage = props.property.data.images.find(
+    (img: any) => img.is_primary === true
+  )
+  
+  return primaryImage ? (primaryImage.file_id || primaryImage.id) : null
 }
 
 const images = ref<File[]>([])
@@ -67,6 +75,7 @@ const form = useForm({
   images: [] as File[],
   image_types: [] as string[],
   primary_image_index: findPrimaryImageIndex(),
+  primary_image_id: findPrimaryImageFileId() as number | null,
   delete_images: [] as number[] 
 })
 
@@ -149,31 +158,46 @@ const parseNumberOrNull = (value: any): number | null => {
 }
 
 const handleImagesChange = (files: File[]) => {
-  console.log('Images changed:', files.length)
   images.value = files
   form.images = files
 }
 
 const handleImageTypes = (types: Array<{id: string, type: string}>) => {
-  console.log('Image types updated:', types)
   imageTypes.value = types
   form.image_types = types.map((t: {id: string, type: string}) => t.type)
 }
 
 const handleRemoveExistingImage = (fileId: number) => {
+  
   if (!form.delete_images.includes(fileId)) {
     form.delete_images.push(fileId)
+  }
+  
+  if (form.primary_image_id === fileId) {
+    form.primary_image_id = null
   }
 }
 
 const handlePrimaryImageChange = (index: number) => {
-  console.log('Primary image changed to index:', index)
   primaryImageIndex.value = index
   form.primary_image_index = index
+  
+  if (props.property?.data.images && index < props.property.data.images.length) {
+
+    const primaryImage = props.property.data.images[index]
+    const fileId = primaryImage.file_id || primaryImage.id
+    form.primary_image_id = fileId
+    
+
+  } else {
+    form.primary_image_id = null
+    
+
+  }
 }
 
 const handleImageRemove = (index: number) => {
-
+  
   if (props.property?.data.images && index < props.property.data.images.length) {
     const imageToDelete = props.property.data.images[index]
     const fileId = imageToDelete.file_id || imageToDelete.id
@@ -191,7 +215,6 @@ const handleImageRemove = (index: number) => {
       form.image_types = imageTypes.value.map((t: {id: string, type: string}) => t.type)
     }
   }
-
 }
 
 const handleSubmit = () => {
@@ -219,40 +242,41 @@ const handleSubmit = () => {
     country: form.country,
     latitude: parseNumberOrNull(form.latitude)?.toString() || '',
     longitude: parseNumberOrNull(form.longitude)?.toString() || '',
-    primary_image_index: form.primary_image_index.toString(),
   }
 
   Object.entries(fields).forEach(([key, value]: [string, string | null]) => {
     if (value !== null && value !== undefined) formData.append(key, value)
   })
 
-  // Booleans
+
   formData.append('is_featured', form.is_featured ? '1' : '0')
   formData.append('is_active', form.is_active ? '1' : '0')
 
-  // Images + image types must have same numeric indices
-    form.images.forEach((file: File, index: number) => {
+  if (form.primary_image_id !== null) {
+    formData.append('primary_image_id', form.primary_image_id.toString())
+
+  } else if (form.images.length > 0) {
+    formData.append('primary_image_index', form.primary_image_index.toString())
+
+  }
+
+  form.images.forEach((file: File, index: number) => {
     formData.append(`images.${index}`, file)
     formData.append(`image_types.${index}`, form.image_types[index] || 'other')
   })
 
-  // Delete existing images
   form.delete_images.forEach((fileId: number, index: number) => {
     formData.append(`delete_images[${index}]`, fileId.toString())
   })
 
-
-  // Add amenities
   form.amenities.forEach((amenityId: number, index: number) => {
     formData.append(`amenities.${index}`, amenityId.toString())
   })
 
-  //Add tags
   form.tags.forEach((tagId: number, index: number) => {
     formData.append(`tags.${index}`, tagId.toString())
   })
 
-  // Determine create vs update
   const url = props.property?.data.id
     ? `/properties/${props.property.data.id}`
     : '/properties'
@@ -263,9 +287,7 @@ const handleSubmit = () => {
 
   router.post(url, formData, {
     preserveScroll: true,
-    onStart: () => console.log(`${method.toUpperCase()} started`),
     onSuccess: () => {
-      console.log(`${method.toUpperCase()} successful`)
       router.visit('/properties')
     },
     onError: (errors) => {
@@ -282,7 +304,6 @@ const handleCancel = () => {
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
     <div class="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-gray-800">
       <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
         <Building2 class="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -297,9 +318,8 @@ const handleCancel = () => {
       </div>
     </div>
 
-    <!-- Two Column Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left Column: Images -->
+
       <div class="lg:col-span-1 space-y-6">
         <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
           <div class="flex items-center gap-3 pb-4 mb-4 border-b border-gray-200 dark:border-gray-800">
@@ -330,11 +350,11 @@ const handleCancel = () => {
         </div>
       </div>
 
-      <!-- Right Column: Form Fields -->
+
       <div class="lg:col-span-2 space-y-6">
         <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
           <div class="space-y-6">
-            <!-- Title -->
+      
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 <Building2 class="inline h-4 w-4 mr-1" /> Property Title <span class="text-red-500">*</span>
@@ -343,7 +363,7 @@ const handleCancel = () => {
                 :error="allErrors.title" required class="w-full" />
             </div>
 
-            <!-- Description -->
+      
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Description
@@ -352,7 +372,7 @@ const handleCancel = () => {
                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"></textarea>
             </div>
 
-            <!-- Property Type & Status -->
+      
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -371,7 +391,7 @@ const handleCancel = () => {
               </div>
             </div>
 
-            <!-- Price -->
+      
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 <DollarSign class="inline h-4 w-4 mr-1" /> Price <span class="text-red-500">*</span>
@@ -380,7 +400,7 @@ const handleCancel = () => {
                 required class="w-full" />
             </div>
 
-            <!-- Bedrooms, Bathrooms, Floor Area -->
+      
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -407,7 +427,7 @@ const handleCancel = () => {
               </div>
             </div>
 
-            <!-- Address -->
+      
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 <MapPin class="inline h-4 w-4 mr-1" /> Full Address <span class="text-red-500">*</span>
@@ -416,7 +436,7 @@ const handleCancel = () => {
                 :error="allErrors.address" required class="w-full" />
             </div>
 
-            <!-- City / State / Country -->
+      
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -441,7 +461,7 @@ const handleCancel = () => {
               </div>
             </div>
 
-            <!-- Latitude / Longitude -->
+      
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Latitude</label>
@@ -455,7 +475,7 @@ const handleCancel = () => {
               </div>
             </div>
 
-            <!-- Featured & Active -->
+      
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -475,7 +495,7 @@ const handleCancel = () => {
           </div>
         </div>
 
-        <!-- Amenities Section -->
+  
         <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
           <div class="flex items-center gap-3 pb-4 mb-4 border-b border-gray-200 dark:border-gray-800">
             <Building2 class="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -512,13 +532,13 @@ const handleCancel = () => {
             <p>• Select all amenities that apply to this property</p>
           </div>
           
-          <!-- Error message -->
+    
           <div v-if="allErrors.amenities" class="mt-2 text-sm text-red-600 dark:text-red-400">
             {{ allErrors.amenities }}
           </div>
         </div>
 
-        <!-- Tags Section -->
+  
         <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
           <div class="flex items-center gap-3 pb-4 mb-4 border-b border-gray-200 dark:border-gray-800">
             <TagIcon class="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -555,13 +575,13 @@ const handleCancel = () => {
             <p>• Select all tags that apply to this property</p>
           </div>
           
-          <!-- Error message -->
+    
           <div v-if="allErrors.amenities" class="mt-2 text-sm text-red-600 dark:text-red-400">
             {{ allErrors.tags }}
           </div>
         </div>
 
-        <!-- Actions -->
+  
         <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
           <BaseButton type="button" variant="outline" @click="handleCancel" :disabled="form.processing">
             Cancel

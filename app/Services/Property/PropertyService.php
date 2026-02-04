@@ -3,7 +3,7 @@
 namespace App\Services\Property;
 
 use App\Models\Property;
-use App\Services\PropertyImages\PropertyImageService;
+use App\Services\PropertyImage\PropertyImageService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +22,6 @@ class PropertyService
         DB::beginTransaction();
 
         try {
-           
             $propertyData = $this->extractPropertyData($data);
             $images = $this->extractImages($data);
             $imageTypes = $this->extractImageTypes($data);
@@ -57,6 +56,9 @@ class PropertyService
         }
     }
 
+    /**
+     * Update an existing property
+     */
     public function update(Property $property, array $data): Property
     {
         DB::beginTransaction();
@@ -66,7 +68,7 @@ class PropertyService
             $property->fill($propertyData);
             $property->save();
 
-            if (isset($data['images']) || isset($data['delete_images'])) {
+            if (isset($data['images']) || isset($data['delete_images']) || isset($data['primary_image_id'])) {
                 $this->handleImageUpdates($property, $data);
             }
 
@@ -84,7 +86,9 @@ class PropertyService
 
             return $property->fresh();
         } catch (\Exception $e) {
+
             DB::rollBack();
+            
             throw $e;
         }
     }
@@ -97,7 +101,12 @@ class PropertyService
                     || str_starts_with($key, 'image_types')
                     || str_starts_with($key, 'tags')
                     || str_starts_with($key, 'amenities')
-                    || in_array($key, ['primary_image_index', 'delete_images', 'update_images', 'primary_image_id']);
+                    || in_array($key, [
+                        'primary_image_index', 
+                        'primary_image_id',
+                        'delete_images', 
+                        'update_images'
+                    ]);
             }))
             ->toArray();
     }
@@ -171,6 +180,8 @@ class PropertyService
         if (empty($tagIds)) {
             return;
         }
+
+        $property->tags()->attach($tagIds);
     }
 
     protected function attachAmenities(Property $property, array $amenityIds): void
@@ -192,11 +203,14 @@ class PropertyService
         $property->amenities()->sync($amenityIds);
     }
 
+    /**
+     * Handle image updates
+     */
     protected function handleImageUpdates(Property $property, array $data): void
     {
         if (!empty($data['delete_images'])) {
             $fileIds = array_map('intval', (array) $data['delete_images']);
-
+            
             $this->imageService->deleteForProperty($property, $fileIds);
         }
 
@@ -212,6 +226,11 @@ class PropertyService
         }
 
         if (!empty($newImages)) {
+            Log::info('Adding new images', [
+                'property_id' => $property->id,
+                'count' => count($newImages)
+            ]);
+            
             $this->imageService->update(
                 $property,
                 $newImages,
@@ -221,8 +240,16 @@ class PropertyService
             );
         }
 
-        if (isset($data['primary_image_index'])) {
-            $this->setPrimaryImageByIndex($property, (int) $data['primary_image_index']);
+        if (!empty($data['primary_image_id'])) {
+
+            $fileId = (int) $data['primary_image_id'];
+            $this->imageService->setPrimaryImage($property, $fileId);
+        } elseif (isset($data['primary_image_index']) && !empty($newImages)) {
+
+
+            $primaryIndex = (int) $data['primary_image_index'];
+            
+            $this->setPrimaryImageByIndex($property, $primaryIndex);
         }
 
         if (!empty($data['update_images'])) {
@@ -250,14 +277,19 @@ class PropertyService
 
     protected function setPrimaryImageByIndex(Property $property, int $primaryIndex): void
     {
-        $allImages = $property->images()->get();
+        $property->load(['images' => function ($query) {
+            $query->orderBy('property_images.sort_order', 'asc');
+        }]);
+        
+        $allImages = $property->images;
 
-        if ($primaryIndex >= 0 && $primaryIndex < $allImages->count()) {
-            $property->images()->update(['is_primary' => false]);
-            
-            $primaryImage = $allImages[$primaryIndex];
-            $primaryImage->update(['is_primary' => true]);
-        } else {
+        if ($primaryIndex < 0 || $primaryIndex >= $allImages->count()) {
+            return;
         }
+
+        $imageAtIndex = $allImages[$primaryIndex];
+        $fileId = $imageAtIndex->id;
+
+        $this->imageService->setPrimaryImage($property, $fileId);
     }
 }
