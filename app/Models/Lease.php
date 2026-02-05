@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Lease\Status;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lease extends Model
 {
@@ -15,27 +16,41 @@ class Lease extends Model
         'start_date',
         'end_date',
         'status',
+        'terms',
+        'notes',
+        'file_id',
+
+        'rent_due_day',
+        'grace_period_days',
+        'late_fee_type',
+        'late_fee_value',
+        'late_fee_cap',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'status' => Status::class,
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'monthly_rent' => 'decimal:2',
+            'late_fee_value' => 'decimal:4',
+            'late_fee_cap' => 'decimal:2',
         ];
     }
 
-    public function property() : BelongsTo
+    public function property(): BelongsTo
     {
-        return $this->belongsTo(Property::class, 'property_id');
+        return $this->belongsTo(Property::class);
     }
 
-    public function tenant() : BelongsTo
+    public function tenant(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class, 'tenant_id');
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function rentPayments(): HasMany
+    {
+        return $this->hasMany(RentPayment::class);
     }
 }

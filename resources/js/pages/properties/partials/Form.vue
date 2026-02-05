@@ -4,9 +4,10 @@ import { Building2, DollarSign, Ruler, Bed, Bath, MapPin, Star, Image as ImageIc
 import { computed, ref } from 'vue'
 
 import BaseButton from '@/components/ui/button/BaseButton.vue'
-import ImageUpload from '@/components/ui/image-upload/ImageUpload.vue'
 import BaseInput from '@/components/ui/input/BaseInput.vue'
 import BaseSelect from '@/components/ui/input/Select.vue'
+
+import ImageUpload from './ImageUpload.vue'
 
 const props = defineProps<{
   property?: any

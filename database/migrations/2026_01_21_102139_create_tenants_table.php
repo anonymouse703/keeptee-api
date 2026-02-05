@@ -13,12 +13,10 @@ return new class extends Migration
     {
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
-                $table->foreignId('property_id')->constrained()->onDelete('cascade');
                 $table->string('name');
                 $table->string('email')->nullable();
                 $table->string('phone')->nullable();
-                $table->date('lease_start')->nullable();
-                $table->date('lease_end')->nullable();
+                $table->text('address');
             $table->timestamps();
         });
     }

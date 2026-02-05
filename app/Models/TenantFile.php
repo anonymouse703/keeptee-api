@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class TenantFile extends Pivot
 {
-    protected $table = 'tenant_files';
+    protected $table = 'tenant_file';
 
     public $incrementing = false;
 

@@ -1,41 +1,25 @@
-<!-- tenants/partials/Form.vue -->
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
-import { Users, X, Paperclip } from 'lucide-vue-next'
+import { Users, Paperclip } from 'lucide-vue-next'
 import { computed, ref, onMounted } from 'vue'
 
 import BaseButton from '@/components/ui/button/BaseButton.vue'
-import FileUpload from '@/components/ui/file/FileUpload.vue'
-import AsyncSelect from '@/components/ui/input/AsyncSelect.vue'
 import BaseInput from '@/components/ui/input/BaseInput.vue'
+import Textarea from '@/components/ui/input/TextArea.vue'
+
+import FileUpload from './FileUpload.vue'
 
 interface TenantFile {
   url: string
   type?: string
   name?: string
+  document_type?: string
 }
 
 const props = defineProps<{
   tenant?: any
+  document_types: any
 }>()
-
-// Helper functions
-const formatDateForInput = (dateString: string | null): string | null => {
-  if (!dateString) return null
-
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return null
-
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-  } catch {
-    return null
-  }
-}
 
 const getFileNameFromUrl = (url: string): string => {
   try {
@@ -45,104 +29,97 @@ const getFileNameFromUrl = (url: string): string => {
   }
 }
 
-// State
-const selectedOption = ref<{ value: number; label: string } | null>(
-  props.tenant?.property
-    ? { value: props.tenant.property_id, label: props.tenant.property.title }
-    : null
-)
-
-const originalProperty = ref<{ value: number; label: string } | null>(
-  selectedOption.value ? { ...selectedOption.value } : null
-)
 
 const selectedFiles = ref<File[]>([])
+const fileDocumentTypes = ref<string[]>([])
 const existingFiles = ref<TenantFile[]>([])
-const showAsyncSelect = ref(!props.tenant?.property)
 
-// Form
 const form = useForm({
-  name: props.tenant?.name ?? '',
-  property_id: props.tenant?.property_id ?? null,
-  email: props.tenant?.email ?? '',
-  phone: props.tenant?.phone ?? '',
-  lease_start: formatDateForInput(props.tenant?.lease_start) ?? null,
-  lease_end: formatDateForInput(props.tenant?.lease_end) ?? null,
+  name: props.tenant?.data?.name ?? '',
+  email: props.tenant?.data?.email ?? '',
+  phone: props.tenant?.data?.phone ?? '',
+  address: props.tenant?.data?.address ?? '',
   files: [] as File[],
-  delete_existing_files: [] as string[]
+  file_document_types: [] as string[],
+  delete_files: [] as string[]
 })
 
-// Computed
-const leaseEndMin = computed(() => form.lease_start || null)
 const allErrors = computed(() => form.errors)
 const previewUrls = computed(() => existingFiles.value.map(file => file.url))
 const hasExistingFiles = computed(() => existingFiles.value.length > 0)
 
-// Methods
-const fetchProperties = async (query: string) => {
-  try {
-    const res = await fetch(`/properties/search-property?query=${encodeURIComponent(query)}`)
-    if (!res.ok) throw new Error('Failed to fetch properties')
-    const data = await res.json()
-    return data.map((p: any) => ({ value: p.id, label: p.title }))
-  } catch (error) {
-    console.error('Error fetching properties:', error)
+const documentTypesOptions = computed(() =>
+  props.document_types?.map((i: { key: string; label: string }) => ({ 
+    label: i.label, 
+    value: i.key 
+  })) ?? []
+)
+
+const initializeExistingFiles = (): TenantFile[] => {
+  if (!props.tenant?.data?.files || !Array.isArray(props.tenant.data.files)) {
     return []
   }
+
+  return props.tenant.data.files.map((file: any) => ({
+    url: file.url || '',
+    type: file.type || 'application/octet-stream',
+    name: file.name || getFileNameFromUrl(file.url || ''),
+    document_type: file.document_type || file.pivot?.document_type || 'other'
+  }))
 }
 
-const handleClearProperty = () => {
-  form.property_id = null
-  selectedOption.value = null
-  showAsyncSelect.value = true
-}
-
-const handleCancelPropertyChange = () => {
-  if (originalProperty.value) {
-    form.property_id = originalProperty.value.value
-    selectedOption.value = { ...originalProperty.value }
-    showAsyncSelect.value = false
+const initializeDocumentTypes = (): string[] => {
+  if (!props.tenant?.data?.files || !Array.isArray(props.tenant.data.files)) {
+    return []
   }
+  
+  const types = props.tenant.data.files.map((file: any) => 
+    file.document_type || file.pivot?.document_type || 'other'
+  )
+  
+  return types
 }
 
-const handlePropertySelect = () => {
-  if (form.property_id && selectedOption.value) {
-    originalProperty.value = { ...selectedOption.value }
-    showAsyncSelect.value = false
-  }
-}
+const handleDocumentTypesChange = (types: string[]) => {
 
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && showAsyncSelect.value && originalProperty.value) {
-    event.preventDefault()
-    handleCancelPropertyChange()
-  }
+  fileDocumentTypes.value = [...types]
+  form.file_document_types = [...types]
 }
 
 const handleFilesChange = (files: File[]) => {
+  
   selectedFiles.value = files
   form.files = files
+  
 }
 
-const handleRemoveFile = (index: number) => {
-  if (index < existingFiles.value.length) {
-    const fileToDelete = existingFiles.value[index]
-    form.delete_existing_files.push(fileToDelete.url)
+const handleRemoveExistingFile = (url: string) => {
+  
+  if (!form.delete_files.includes(url)) {
+    form.delete_files.push(url)
+  }
+  
+  const index = existingFiles.value.findIndex(f => f.url === url)
+  if (index !== -1) {
     existingFiles.value.splice(index, 1)
-  } else {
-    const newFileIndex = index - existingFiles.value.length
-    selectedFiles.value.splice(newFileIndex, 1)
-    form.files = [...selectedFiles.value]
   }
 }
 
 const handleRemoveAllFiles = () => {
+  
+
   existingFiles.value.forEach(file => {
-    form.delete_existing_files.push(file.url)
+    if (!form.delete_files.includes(file.url)) {
+      form.delete_files.push(file.url)
+    }
   })
+  
   existingFiles.value = []
   selectedFiles.value = []
+  fileDocumentTypes.value = []
   form.files = []
+  form.file_document_types = []
+  
 }
 
 const handleDownloadFile = (index: number) => {
@@ -153,49 +130,46 @@ const handleDownloadFile = (index: number) => {
 }
 
 const handleSubmit = () => {
-  // Ensure property_id is set
-  if (!form.property_id) {
-    if (selectedOption.value?.value) {
-      form.property_id = selectedOption.value.value
-    } else if (props.tenant?.property_id) {
-      form.property_id = props.tenant.property_id
-    }
-  }
 
   const formData = new FormData()
 
-  // Add form fields
-  Object.entries(form.data()).forEach(([key, value]) => {
-    if (key === 'files' && Array.isArray(value)) {
-      value.forEach(file => {
-        if (file instanceof File) {
-          formData.append('files[]', file)
-        }
-      })
-    } else if (key === 'delete_existing_files' && Array.isArray(value)) {
-      value.forEach(identifier => {
-        formData.append('delete_existing_files[]', identifier)
-      })
-    } else if (value !== null && value !== undefined) {
-      formData.append(key, String(value))
-    }
+  formData.append('name', form.name)
+  formData.append('email', form.email || '')
+  formData.append('phone', form.phone || '')
+  formData.append('address', form.address || '') 
+
+  const newFilesDocTypes = fileDocumentTypes.value.slice(existingFiles.value.length)
+
+  newFilesDocTypes.forEach((docType, index) => {
+    formData.append(`file_document_types[${index}]`, docType)
   })
 
-  // Add method spoofing for PUT requests
-  if (props.tenant?.id) {
+  form.files.forEach((file, index) => {
+    formData.append(`files[${index}]`, file)
+  })
+
+  form.delete_files.forEach((url, index) => {
+    formData.append(`delete_files[${index}]`, url)
+  })
+
+  if (props.tenant?.data?.id) {
     formData.append('_method', 'PUT')
   }
 
-  // Submit
-  const url = props.tenant?.id ? `/tenants/${props.tenant.id}` : '/tenants'
-  
+  const url = props.tenant?.data?.id ? `/tenants/${props.tenant.data.id}` : '/tenants'
+
   router.post(url, formData, {
     preserveScroll: true,
+    onStart: () => console.log('Submitting tenant form...'),
     onSuccess: () => {
       form.reset()
       selectedFiles.value = []
+      fileDocumentTypes.value = []
       existingFiles.value = []
-      form.delete_existing_files = []
+      form.delete_files = []
+    },
+    onError: (errors) => {
+      console.error('Form submission errors:', errors)
     }
   })
 }
@@ -203,33 +177,25 @@ const handleSubmit = () => {
 const handleCancel = () => {
   form.reset()
   selectedFiles.value = []
+  fileDocumentTypes.value = []
   existingFiles.value = initializeExistingFiles()
-  form.delete_existing_files = []
+  form.delete_files = []
   router.visit('/tenants')
 }
 
-// Initialize existing files from tenant data
-const initializeExistingFiles = (): TenantFile[] => {
-  if (!props.tenant?.file || !Array.isArray(props.tenant.file)) {
-    return []
-  }
-
-  return props.tenant.file.map((file: any) => ({
-    url: file.url || '',
-    type: file.type || 'application/octet-stream',
-    name: file.name || getFileNameFromUrl(file.url || '')
-  }))
-}
-
-// Lifecycle
 onMounted(() => {
+  
   existingFiles.value = initializeExistingFiles()
+  
+  const initialTypes = initializeDocumentTypes()
+  fileDocumentTypes.value = initialTypes
+  form.file_document_types = initialTypes
+
 })
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
     <div class="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-gray-800">
       <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
         <Users class="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -246,9 +212,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Two Column Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <!-- Left Column: File Upload -->
+
       <div class="space-y-6">
         <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
           <div class="flex items-center gap-3 mb-6">
@@ -266,25 +231,27 @@ onMounted(() => {
           </div>
 
           <div class="space-y-6">
-            <!-- File Upload Component -->
+      
             <FileUpload 
               v-model="selectedFiles" 
               :preview-urls="previewUrls" 
+              :document-types-options="documentTypesOptions"
               label="Tenant Documents"
               description="Upload tenant agreement and related documents (PDF, DOC, DOCX, Images)"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
-              :max-size="10" 
+              :max-size="1" 
               :multiple="true" 
               :max-files="10"
               :required="!props.tenant && !hasExistingFiles" 
               :error="allErrors.files"
-              @update:modelValue="handleFilesChange" 
-              @remove="handleRemoveFile" 
+              @update:modelValue="handleFilesChange"
+              @update:document-types="handleDocumentTypesChange"
+              @remove-existing="handleRemoveExistingFile"
               @remove-all="handleRemoveAllFiles"
               @download="handleDownloadFile" 
             />
 
-            <!-- Documents Checklist -->
+      
             <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
               <h5 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
                 Required Documents Checklist
@@ -313,7 +280,7 @@ onMounted(() => {
               </ul>
             </div>
 
-            <!-- Existing Files Info -->
+      
             <div v-if="hasExistingFiles" class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
               <div class="flex items-center justify-between mb-2">
                 <h5 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -331,11 +298,11 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Right Column: Tenant Information -->
+
       <div class="space-y-6">
         <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
           <div class="space-y-5">
-            <!-- Tenant Name -->
+      
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Tenant Name <span class="text-red-500">*</span>
@@ -350,53 +317,6 @@ onMounted(() => {
               />
             </div>
 
-            <!-- Property Selection -->
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Property <span class="text-red-500">*</span>
-              </label>
-
-              <div v-if="!showAsyncSelect && selectedOption" class="relative">
-                <input 
-                  type="text"
-                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 pr-10 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
-                  :value="selectedOption.label" 
-                  readonly 
-                />
-
-                <button 
-                  type="button" 
-                  @click="handleClearProperty"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                  title="Clear selection"
-                >
-                  <X class="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-
-              <div v-else ref="asyncSelectContainer" class="relative" @keydown="handleKeyDown" tabindex="-1">
-                <AsyncSelect 
-                  v-model="form.property_id" 
-                  :fetchOptions="fetchProperties" 
-                  :selectedOption="selectedOption"
-                  placeholder="Search and select a property..." 
-                  :error="allErrors.property_id"
-                  @update:modelValue="handlePropertySelect" 
-                />
-
-                <button 
-                  v-if="originalProperty" 
-                  type="button" 
-                  @click="handleCancelPropertyChange"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors z-10"
-                  title="Cancel change (ESC)"
-                >
-                  <X class="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-            </div>
-
-            <!-- Email -->
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email Address
@@ -410,7 +330,6 @@ onMounted(() => {
               />
             </div>
 
-            <!-- Phone -->
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Phone Number
@@ -424,37 +343,19 @@ onMounted(() => {
               />
             </div>
 
-            <!-- Lease Dates -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Lease Start Date
-                </label>
-                <BaseInput 
-                  v-model="form.lease_start" 
-                  type="date" 
-                  :error="allErrors.lease_start"
-                  class="w-full" 
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Address
+              </label>
+              <Textarea
+                  v-model="form.address"
+                  placeholder="Enter tenant address"
+                  :rows="3"
                 />
-              </div>
-
-              <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Lease End Date
-                </label>
-                <BaseInput 
-                  v-model="form.lease_end" 
-                  type="date" 
-                  :min="leaseEndMin" 
-                  :error="allErrors.lease_end"
-                  class="w-full" 
-                />
-              </div>
             </div>
           </div>
         </div>
 
-        <!-- Form Actions -->
         <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
           <BaseButton 
             type="button" 
@@ -478,12 +379,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Responsive adjustments */
-@media (max-width: 1024px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

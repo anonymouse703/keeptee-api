@@ -8,32 +8,42 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            'property_id' => 'required|exists:properties,id',
             'name'        => 'required|string|max:255',
             'email'       => 'nullable|email|max:255',
             'phone'       => 'required|string|max:20',
-            'lease_start' => 'required|date',
-            'lease_end'   => 'required|date|after_or_equal:lease_start',
-            'file'        => ['nullable', 'array'],
-            'file.*'      => ['file', 'mimes:pdf,doc,docx', 'max:10240'], 
-            'document_type'    => ['nullable', 'array'], 
-            'document_type.*'  => ['nullable', Rule::enum(DocumentType::class)],
+            'address'     => 'required|string|max:255',
+            
+            // File validation - support array notation
+            'files'       => ['nullable', 'array', 'max:10'],
+            'files.*'     => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:10240'], 
+            
+            // Document types must match files array
+            'file_document_types'    => ['nullable', 'array'], 
+            'file_document_types.*'  => ['nullable', 'string', Rule::enum(DocumentType::class)],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'Tenant name is required.',
+            'phone.required' => 'Phone number is required.',
+            'phone.required' => 'Phone number is required.',
+            'lease_start.required' => 'Lease start date is required.',
+            'lease_end.required' => 'Lease end date is required.',
+            'lease_end.after_or_equal' => 'Lease end date must be after or equal to start date.',
+            'files.*.file' => 'Each upload must be a valid file.',
+            'files.*.mimes' => 'Files must be PDF, DOC, DOCX, or image files.',
+            'files.*.max' => 'Each file must not exceed 10MB.',
+            'file_document_types.*.enum' => 'Invalid document type selected.',
         ];
     }
 }

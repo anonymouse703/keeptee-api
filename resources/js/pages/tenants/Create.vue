@@ -8,6 +8,10 @@ import type { BreadcrumbItem } from '@/types'
 
 import Form from './partials/Form.vue'
 
+const props = defineProps<{
+  document_types?: any
+}>()
+
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Tenants', href: '/tenants' },
   { title: 'Create Tenant', href: '/tenants/create' },
@@ -50,7 +54,7 @@ const handleCancel = () => {
 
       <div class="mx-auto max-w-7xl">
         <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <Form />
+          <Form :document_types="props.document_types"/>
         </div>
       </div>
     </div>

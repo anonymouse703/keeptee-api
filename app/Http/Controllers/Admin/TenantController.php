@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\Tenant\DocumentType;
 use Exception;
 use App\Models\File;
 use Inertia\Inertia;
@@ -27,7 +28,7 @@ class TenantController extends Controller
     public function index()
     {
         $tenants = $this->tenantRepository
-                    ->with(['property'])
+                    ->with(['files'])
                     ->paginate();
 
         return Inertia::render('tenants/Index', [
@@ -40,11 +41,12 @@ class TenantController extends Controller
         return Inertia::render('tenants/Create', 
             [
                 'properties' => Property::pluck('title', 'id'),
+                'document_types' => DocumentType::collection()
             ]);
     }
 
     public function store(StoreRequest $request)
-    {
+    {   
         try {
             $this->tenantService->create($request->all());
 
@@ -66,107 +68,65 @@ class TenantController extends Controller
 
     public function show(Tenant $tenant)
     {
-        $tenant->load('property');
+        $tenant->load(['property', 'files']);
         
         return Inertia::render('tenants/Show', [
-            'tenant' => $tenant,
+            'tenant' => new TenantResource($tenant),
         ]);
     }
 
     public function edit(Tenant $tenant)
     {
-        $tenant->load('property');
+        $tenant->load(['property', 'files']);
         
         return Inertia::render('tenants/Edit', [
             'tenant' => new TenantResource($tenant),
             'properties' => Property::pluck('title', 'id'),
+            'document_types' => \App\Enums\Tenant\DocumentType::collection(),
         ]);
     }
 
-
-    public function update(UpdateRequest $request, Tenant $tenant, TenantService $tenantService)
+    public function update(UpdateRequest $request, Tenant $tenant)
     {
         try {
-            $validatedData = $request->validated();
-            $fileData = [];
-            
-            // Handle new file uploads
-            if ($request->hasFile('file')) {
-                $documentTypes = $request->input('document_type', []);
-                
-                foreach ($request->file('file') as $index => $uploadedFile) {
-                    $fileId = TenantFilesUploader::uploadFile(
-                        $uploadedFile, 
-                        Auth::user()
-                    );
-                    
-                    $fileData[$fileId] = [
-                        'document_type' => $documentTypes[$index] ?? null
-                    ];
-                }
-            }
-            
-            // Handle file deletions
-            if ($request->has('delete_files')) {
-                $deleteFileIds = $request->input('delete_files', []);
-                $tenant->files()->detach($deleteFileIds);
-                
-                foreach ($deleteFileIds as $fileId) {
-                    $file = $this->fileRepository->find($fileId);
-                    if ($file && !$file->properties()->exists() && !$file->tenants()->exists()) {
-                        Storage::disk($file->disk)->delete($file->path);
-                        if ($file->thumbnail_path) {
-                            Storage::disk($file->disk)->delete($file->thumbnail_path);
-                        }
-                        $file->delete();
-                    }
-                }
-            }
-            
-            // Attach new files
-            if (!empty($fileData)) {
-                $tenant->files()->attach($fileData);
-            }
-            
-            // Remove file-related data from payload before updating tenant
-            unset($validatedData['file'], $validatedData['document_type'], $validatedData['delete_files']);
-            
-            // Update tenant using service
-            $tenantService->update($tenant, $validatedData);
-            
-        } catch (Exception $exception) {
+            $this->tenantService->update($tenant, $request->all());
+
+            return redirect()
+                ->route('tenants.index')
+                ->with('flash', [
+                    'type' => 'success',
+                    'message' => __('Tenant successfully updated.'),
+                ]);
+
+        } catch (\Throwable $exception) {
             report($exception);
-            
+
             return back()
                 ->withInput()
-                ->with('flash', [
-                    'type' => 'error',
-                    'message' => __('Something went wrong. Please try again.'),
-                ]);
+                ->withErrors(__('Failed to update tenant: ' . $exception->getMessage()));
         }
-
-        return redirect()
-            ->route('tenants.index')
-            ->with('flash', [
-                'type' => 'success',
-                'message' => __('Tenant successfully updated.'),
-            ]);
     }
 
     public function destroy(Tenant $tenant)
     {
         try {
-            $this->tenantRepository->delete($tenant);
+            $this->tenantService->delete($tenant);
+            
+            return redirect()
+                ->route('tenants.index')
+                ->with('flash', [
+                    'type' => 'success',
+                    'message' => __('Tenant successfully deleted.'),
+                ]);
+                
         } catch (Exception $exception) {
             report($exception);
-        }
-
-        return redirect()
-            ->route('tenants.index')
-            ->with('flash', [
-                'type' => 'danger',
-                'message' => __('Tenant successfully deleted.'),
+            
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => __('Failed to delete tenant.'),
             ]);
+        }
     }
 
     public function searchTenant(Request $request)

@@ -1,8 +1,10 @@
 <?php
 
-use App\Http\Middleware\HandleAppearance;
-use App\Http\Middleware\HandleInertiaRequests;
+use App\Jobs\RentPayment\GenerateRentPaymentJob;
 use Illuminate\Foundation\Application;
+use App\Http\Middleware\HandleAppearance;
+use Illuminate\Console\Scheduling\Schedule;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
@@ -25,4 +27,19 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        
+        $schedule->command('rent:generate-monthly')->dailyAt('00:01');
+
+        $schedule->call(function () {
+            \App\Models\Lease::where('status', 'active')->each(function ($lease) {
+                $dueDate = now()
+                    ->startOfMonth()
+                    ->addDays($lease->rent_due_day - 1); 
+
+                GenerateRentPaymentJob::dispatch($lease, $dueDate);
+            });
+        })->dailyAt('01:00');
+    })
+    ->create();

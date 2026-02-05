@@ -73,8 +73,7 @@ const columns = [
     { key: 'name', label: 'Tenant Name' },
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone' },
-    { key: 'lease_start', label: 'Lease Start' },
-    { key: 'lease_end', label: 'Lease End' },
+    { key: 'address', label: 'Address' },
 ]
 
 const statusOptions = [

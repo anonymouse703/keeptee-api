@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import { Upload, Trash2, AlertCircle, ImageIcon, Tag, Star } from 'lucide-vue-next'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
+
 import BaseButton from '@/components/ui/button/BaseButton.vue'
 import BaseSelect from '@/components/ui/input/Select.vue'
 
@@ -234,9 +235,9 @@ const removeExistingImage = (index: number) => {
   }
 }
 
-const undoRemoveExistingImage = (fileId: number) => {
-  markedForDeletion.value.delete(fileId)
-}
+// const undoRemoveExistingImage = (fileId: number) => {
+//   markedForDeletion.value.delete(fileId)
+// }
 
 const removeAllImages = () => {
 
