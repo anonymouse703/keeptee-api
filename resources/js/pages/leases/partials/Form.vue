@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
-import { Users, X, Paperclip } from 'lucide-vue-next'
+import { FileText, X, Paperclip, ClipboardList } from 'lucide-vue-next'
 import { computed, ref, onMounted } from 'vue'
 
 import BaseButton from '@/components/ui/button/BaseButton.vue'
 import AsyncSelect from '@/components/ui/input/AsyncSelect.vue'
 import BaseInput from '@/components/ui/input/BaseInput.vue'
+import BaseSelect from '@/components/ui/input/Select.vue'
 
-// import FileUpload from './FileUpload.vue'
+import FileUpload from './FileUpload.vue'
 
 interface TenantFile {
   url: string
@@ -17,9 +18,13 @@ interface TenantFile {
 }
 
 const props = defineProps<{
-  tenant?: any
+  lease?: any
+  late_fee_types: any
+  statuses: any
   document_types: any
 }>()
+
+console.log(props.late_fee_types)
 
 const formatDateForInput = (dateString: string | null): string | null => {
   if (!dateString) return null
@@ -46,34 +51,53 @@ const getFileNameFromUrl = (url: string): string => {
   }
 }
 
-const selectedOption = ref<{ value: number; label: string } | null>(
-  props.tenant?.data?.property
-    ? { value: props.tenant.data.property_id, label: props.tenant.data.property.title }
+const selectedTenantOption = ref<{ value: number; label: string } | null>(
+  props.lease?.data?.lease
+    ? { value: props.lease.data.lease_id, label: props.lease.data.tenant.name }
+    : null
+)
+
+const originalTenant = ref<{ value: number; label: string } | null>(
+  selectedTenantOption.value ? { ...selectedTenantOption.value } : null
+)
+
+const selectedPropertyOption = ref<{ value: number; label: string } | null>(
+  props.lease?.data?.property
+    ? { value: props.lease.data.property_id, label: props.lease.data.property.title }
     : null
 )
 
 const originalProperty = ref<{ value: number; label: string } | null>(
-  selectedOption.value ? { ...selectedOption.value } : null
+  selectedPropertyOption.value ? { ...selectedPropertyOption.value } : null
 )
 
 const selectedFiles = ref<File[]>([])
 const fileDocumentTypes = ref<string[]>([])
 const existingFiles = ref<TenantFile[]>([])
-const showAsyncSelect = ref(!props.tenant?.data?.property)
+const showAsyncTenantSelect = ref(!props.lease?.data?.tenant)
+const showAsyncPropertySelect = ref(!props.lease?.data?.property)
 
 const form = useForm({
-  name: props.tenant?.data?.name ?? '',
-  property_id: props.tenant?.data?.property_id ?? null,
-  email: props.tenant?.data?.email ?? '',
-  phone: props.tenant?.data?.phone ?? '',
-  lease_start: formatDateForInput(props.tenant?.data?.lease_start) ?? null,
-  lease_end: formatDateForInput(props.tenant?.data?.lease_end) ?? null,
+  tenant_id: props.lease?.data?.tenant_id ?? null,
+  file_id: props.lease?.data?.file_id ?? null,
+  property_id: props.lease?.data?.property_id ?? null,
+  monthly_rent: props.lease?.data?.monthly_rent ?? '',
+  start_date: formatDateForInput(props.lease?.data?.start_date) ?? null,
+  end_date: formatDateForInput(props.lease?.data?.end_date) ?? null,
+  status: props.lease?.data?.status ?? '',
+  terms: props.lease?.data?.terms ?? '',
+  notes: props.lease?.data?.notes ?? '',
+  rent_due_day: props.lease?.data?.rent_due_day ?? '',
+  grace_period_days: props.lease?.data?.grace_period_days ?? '',
+  late_fee_type: props.lease?.data?.late_fee_type ?? '',
+  late_fee_value: props.lease?.data?.late_fee_value ?? '',
+  late_fee_cap: props.lease?.data?.late_fee_cap ?? '',
   files: [] as File[],
   file_document_types: [] as string[],
   delete_files: [] as string[]
 })
 
-const leaseEndMin = computed(() => form.lease_start || null)
+const leaseEndMin = computed(() => form.start_date || null)
 const allErrors = computed(() => form.errors)
 const previewUrls = computed(() => existingFiles.value.map(file => file.url))
 const hasExistingFiles = computed(() => existingFiles.value.length > 0)
@@ -85,12 +109,20 @@ const documentTypesOptions = computed(() =>
   })) ?? []
 )
 
+const statusOptions = computed(() =>
+  props.statuses?.map((i: { key: string; label: string }) => ({ label: i.label, value: i.key })) ?? []
+)
+
+const lateFeeTypeOptions = computed(() =>
+  props.late_fee_types?.map((i: { key: string; label: string }) => ({ label: i.label, value: i.key })) ?? []
+)
+
 const initializeExistingFiles = (): TenantFile[] => {
-  if (!props.tenant?.data?.files || !Array.isArray(props.tenant.data.files)) {
+  if (!props.lease?.data?.files || !Array.isArray(props.lease.data.files)) {
     return []
   }
 
-  return props.tenant.data.files.map((file: any) => ({
+  return props.lease.data.files.map((file: any) => ({
     url: file.url || '',
     type: file.type || 'application/octet-stream',
     name: file.name || getFileNameFromUrl(file.url || ''),
@@ -99,11 +131,11 @@ const initializeExistingFiles = (): TenantFile[] => {
 }
 
 const initializeDocumentTypes = (): string[] => {
-  if (!props.tenant?.data?.files || !Array.isArray(props.tenant.data.files)) {
+  if (!props.lease?.data?.files || !Array.isArray(props.lease.data.files)) {
     return []
   }
   
-  const types = props.tenant.data.files.map((file: any) => 
+  const types = props.lease.data.files.map((file: any) => 
     file.document_type || file.pivot?.document_type || 'other'
   )
   
@@ -114,6 +146,18 @@ const handleDocumentTypesChange = (types: string[]) => {
 
   fileDocumentTypes.value = [...types]
   form.file_document_types = [...types]
+}
+
+const fetchTenants = async (query: string) => {
+  try {
+    const res = await fetch(`/tenants/search-tenant?query=${encodeURIComponent(query)}`)
+    if (!res.ok) throw new Error('Failed to fetch tenants')
+    const data = await res.json()
+    return data.map((p: any) => ({ value: p.id, label: p.name }))
+  } catch (error) {
+    console.error('Error fetching tenants:', error)
+    return []
+  }
 }
 
 const fetchProperties = async (query: string) => {
@@ -128,29 +172,57 @@ const fetchProperties = async (query: string) => {
   }
 }
 
+const handleClearTenant = () => {
+  form.property_id = null
+  selectedPropertyOption.value = null
+  showAsyncPropertySelect.value = true
+}
+
+const handleCancelTenantChange = () => {
+  if (originalProperty.value) {
+    form.property_id = originalProperty.value.value
+    selectedPropertyOption.value = { ...originalProperty.value }
+    showAsyncPropertySelect.value = false
+  }
+}
+
+const handleTenantSelect = () => {
+  if (form.property_id && selectedPropertyOption.value) {
+    originalProperty.value = { ...selectedPropertyOption.value }
+    showAsyncPropertySelect.value = false
+  }
+}
+
+const handleTenantKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && showAsyncPropertySelect.value && originalProperty.value) {
+    event.preventDefault()
+    handleCancelPropertyChange()
+  }
+}
+
 const handleClearProperty = () => {
   form.property_id = null
-  selectedOption.value = null
-  showAsyncSelect.value = true
+  selectedPropertyOption.value = null
+  showAsyncPropertySelect.value = true
 }
 
 const handleCancelPropertyChange = () => {
   if (originalProperty.value) {
     form.property_id = originalProperty.value.value
-    selectedOption.value = { ...originalProperty.value }
-    showAsyncSelect.value = false
+    selectedPropertyOption.value = { ...originalProperty.value }
+    showAsyncPropertySelect.value = false
   }
 }
 
 const handlePropertySelect = () => {
-  if (form.property_id && selectedOption.value) {
-    originalProperty.value = { ...selectedOption.value }
-    showAsyncSelect.value = false
+  if (form.property_id && selectedPropertyOption.value) {
+    originalProperty.value = { ...selectedPropertyOption.value }
+    showAsyncPropertySelect.value = false
   }
 }
 
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && showAsyncSelect.value && originalProperty.value) {
+const handlePropertyKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && showAsyncPropertySelect.value && originalProperty.value) {
     event.preventDefault()
     handleCancelPropertyChange()
   }
@@ -177,7 +249,6 @@ const handleRemoveExistingFile = (url: string) => {
 
 const handleRemoveAllFiles = () => {
   
-
   existingFiles.value.forEach(file => {
     if (!form.delete_files.includes(file.url)) {
       form.delete_files.push(file.url)
@@ -201,22 +272,37 @@ const handleDownloadFile = (index: number) => {
 
 const handleSubmit = () => {
   
-  if (!form.property_id) {
-    if (selectedOption.value?.value) {
-      form.property_id = selectedOption.value.value
-    } else if (props.tenant?.data?.property_id) {
-      form.property_id = props.tenant.data.property_id
+  if (!form.tenant_id) {
+    if (selectedTenantOption.value?.value) {
+      form.tenant_id = selectedTenantOption.value.value
+    } else if (props.lease?.data?.tenant_id) {
+      form.tenant_id = props.lease.data.tenant_id
+    }
+  }
+
+   if (!form.property_id) {
+    if (selectedPropertyOption.value?.value) {
+      form.property_id = selectedPropertyOption.value.value
+    } else if (props.lease?.data?.property_id) {
+      form.property_id = props.lease.data.property_id
     }
   }
 
   const formData = new FormData()
 
-  formData.append('name', form.name)
+  formData.append('tenant_id', String(form.tenant_id || ''))
   formData.append('property_id', String(form.property_id || ''))
-  formData.append('email', form.email || '')
-  formData.append('phone', form.phone || '')
-  formData.append('lease_start', form.lease_start || '')
-  formData.append('lease_end', form.lease_end || '')
+  formData.append('monthly_rent', form.monthly_rent || '')
+  formData.append('start_date', form.start_date || '')
+  formData.append('end_date', form.end_date || '')
+  formData.append('status', form.status || '')
+  formData.append('terms', form.terms || '')
+  formData.append('notes', form.notes || '')
+  formData.append('rent_due_day', form.rent_due_day || '')
+  formData.append('grace_period_days', form.grace_period_days || '')
+  formData.append('late_fee_type', form.late_fee_type || '')
+  formData.append('late_fee_value', form.late_fee_value || '')
+  formData.append('late_fee_cap', form.late_fee_cap || '')
 
   const newFilesDocTypes = fileDocumentTypes.value.slice(existingFiles.value.length)
 
@@ -234,15 +320,15 @@ const handleSubmit = () => {
     formData.append(`delete_files[${index}]`, url)
   })
 
-  if (props.tenant?.data?.id) {
+  if (props.lease?.data?.id) {
     formData.append('_method', 'PUT')
   }
 
-  const url = props.tenant?.data?.id ? `/tenants/${props.tenant.data.id}` : '/tenants'
+  const url = props.lease?.data?.id ? `/leases/${props.lease.data.id}` : '/leases'
 
   router.post(url, formData, {
     preserveScroll: true,
-    onStart: () => console.log('Submitting tenant form...'),
+    onStart: () => console.log('Submitting lease form...'),
     onSuccess: () => {
       form.reset()
       selectedFiles.value = []
@@ -262,7 +348,7 @@ const handleCancel = () => {
   fileDocumentTypes.value = []
   existingFiles.value = initializeExistingFiles()
   form.delete_files = []
-  router.visit('/tenants')
+  router.visit('/leases')
 }
 
 onMounted(() => {
@@ -280,136 +366,96 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-gray-800">
       <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-        <Users class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <FileText class="h-5 w-5 text-blue-600 dark:text-blue-400" />
       </div>
       <div>
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-          {{ props.tenant ? 'Edit Tenant' : 'Create New Tenant' }}
+          {{ props.lease ? 'Edit Lease' : 'Create New Lease' }}
         </h3>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          {{ props.tenant
-            ? 'Update tenant information and documents'
-            : 'Add a new tenant with required documents' }}
+          {{ props.lease
+            ? 'Update lease information and documents'
+            : 'Add a new lease agreement' }}
         </p>
       </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
+      <!-- Left Column: Lease Details -->
       <div class="space-y-6">
         <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
           <div class="flex items-center gap-3 mb-6">
             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/30">
-              <Paperclip class="h-5 w-5 text-primary-600 dark:text-primary-400" />
+              <FileText class="h-5 w-5 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
               <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
-                Tenant Documents
+                Lease Information
               </h4>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                Upload required tenant documents
+                Enter lease details and terms
               </p>
             </div>
           </div>
 
-          <div class="space-y-6">
-      
-            <FileUpload 
-              v-model="selectedFiles" 
-              :preview-urls="previewUrls" 
-              :document-types-options="documentTypesOptions"
-              label="Tenant Documents"
-              description="Upload tenant agreement and related documents (PDF, DOC, DOCX, Images)"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
-              :max-size="1" 
-              :multiple="true" 
-              :max-files="10"
-              :required="!props.tenant && !hasExistingFiles" 
-              :error="allErrors.files"
-              @update:modelValue="handleFilesChange"
-              @update:document-types="handleDocumentTypesChange"
-              @remove-existing="handleRemoveExistingFile"
-              @remove-all="handleRemoveAllFiles"
-              @download="handleDownloadFile" 
-            />
-
-      
-            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
-              <h5 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
-                Required Documents Checklist
-              </h5>
-              <ul class="text-sm text-blue-700 dark:text-blue-400 space-y-2">
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Valid ID (Passport, Driver's License)</span>
-                </li>
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Signed Rental Agreement</span>
-                </li>
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Proof of Income (Last 3 months)</span>
-                </li>
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Security Deposit Receipt</span>
-                </li>
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Emergency Contact Information</span>
-                </li>
-              </ul>
-            </div>
-
-      
-            <div v-if="hasExistingFiles" class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <h5 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Existing Documents
-                </h5>
-                <span class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ existingFiles.length }} file{{ existingFiles.length !== 1 ? 's' : '' }}
-                </span>
-              </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Click the download icon to view existing files. Remove to delete them.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div class="space-y-6">
-        <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
           <div class="space-y-5">
-      
+            <!-- Tenant Selection -->
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Tenant Name <span class="text-red-500">*</span>
+                Tenant <span class="text-red-500">*</span>
               </label>
-              <BaseInput 
-                v-model="form.name" 
-                type="text" 
-                placeholder="Enter tenant name" 
-                :error="allErrors.name"
-                required 
-                class="w-full" 
-              />
+
+              <div v-if="!showAsyncTenantSelect && selectedTenantOption" class="relative">
+                <input 
+                  type="text"
+                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 pr-10 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                  :value="selectedTenantOption.label" 
+                  readonly 
+                />
+
+                <button 
+                  type="button" 
+                  @click="handleClearTenant"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                  title="Clear selection"
+                >
+                  <X class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+
+              <div v-else ref="asyncSelectContainer" class="relative" @keydown="handleTenantKeyDown" tabindex="-1">
+                <AsyncSelect 
+                  v-model="form.tenant_id" 
+                  :fetchOptions="fetchTenants" 
+                  :selectedTenantOption="selectedTenantOption"
+                  placeholder="Search and select a tenant..." 
+                  :error="allErrors.tenant_id"
+                  @update:modelValue="handleTenantSelect" 
+                />
+
+                <button 
+                  v-if="originalTenant" 
+                  type="button" 
+                  @click="handleCancelTenantChange"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors z-10"
+                  title="Cancel change (ESC)"
+                >
+                  <X class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
             </div>
 
-      
+            <!-- Property Selection -->
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Property <span class="text-red-500">*</span>
               </label>
 
-              <div v-if="!showAsyncSelect && selectedOption" class="relative">
+              <div v-if="!showAsyncPropertySelect && selectedPropertyOption" class="relative">
                 <input 
                   type="text"
                   class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 pr-10 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
-                  :value="selectedOption.label" 
+                  :value="selectedPropertyOption.label" 
                   readonly 
                 />
 
@@ -423,11 +469,11 @@ onMounted(() => {
                 </button>
               </div>
 
-              <div v-else ref="asyncSelectContainer" class="relative" @keydown="handleKeyDown" tabindex="-1">
+              <div v-else ref="asyncSelectContainer" class="relative" @keydown="handlePropertyKeyDown" tabindex="-1">
                 <AsyncSelect 
                   v-model="form.property_id" 
                   :fetchOptions="fetchProperties" 
-                  :selectedOption="selectedOption"
+                  :selectedPropertyOption="selectedPropertyOption"
                   placeholder="Search and select a property..." 
                   :error="allErrors.property_id"
                   @update:modelValue="handlePropertySelect" 
@@ -445,65 +491,299 @@ onMounted(() => {
               </div>
             </div>
 
-      
+            <!-- Monthly Rate -->
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email Address
+                Monthly Rate <span class="text-red-500">*</span>
               </label>
-              <BaseInput 
-                v-model="form.email" 
-                type="email" 
-                placeholder="Enter email" 
-                :error="allErrors.email"
-                class="w-full" 
-              />
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+                <BaseInput 
+                  v-model="form.monthly_rent" 
+                  type="number" 
+                  placeholder="0.00" 
+                  :error="allErrors.monthly_rent"
+                  class="w-full pl-8" 
+                  min="0"
+                  step="0.01"
+                />
+              </div>
             </div>
 
-      
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Phone Number
-              </label>
-              <BaseInput 
-                v-model="form.phone" 
-                type="tel" 
-                placeholder="Enter phone number" 
-                :error="allErrors.phone"
-                class="w-full" 
-              />
-            </div>
-
-      
+            <!-- Date Range -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Lease Start Date
+                  Start Date <span class="text-red-500">*</span>
                 </label>
                 <BaseInput 
-                  v-model="form.lease_start" 
+                  v-model="form.start_date" 
                   type="date" 
-                  :error="allErrors.lease_start"
+                  :error="allErrors.start_date"
                   class="w-full" 
                 />
               </div>
 
               <div>
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Lease End Date
+                  End Date
                 </label>
                 <BaseInput 
-                  v-model="form.lease_end" 
+                  v-model="form.end_date" 
                   type="date" 
                   :min="leaseEndMin" 
-                  :error="allErrors.lease_end"
+                  :error="allErrors.end_date"
                   class="w-full" 
                 />
               </div>
+            </div>
+
+            <!-- Rent Due Day -->
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Rent Due Day <span class="text-red-500">*</span>
+              </label>
+              <BaseInput 
+                v-model="form.rent_due_day" 
+                type="number" 
+                placeholder="e.g., 1 (for 1st of the month)" 
+                :error="allErrors.rent_due_day"
+                class="w-full" 
+                min="1"
+                max="31"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Day of the month when rent is due (1-31)
+              </p>
+            </div>
+
+            <!-- Grace Period -->
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Grace Period (Days)
+              </label>
+              <BaseInput 
+                v-model="form.grace_period_days" 
+                type="number" 
+                placeholder="e.g., 5" 
+                :error="allErrors.grace_period_days"
+                class="w-full" 
+                min="0"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Number of days after due date before late fees apply
+              </p>
+            </div>
+
+            <!-- Late Fee Configuration -->
+            <div class="space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <h5 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Late Fee Configuration
+              </h5>
+              
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Late Fee Type
+                </label>
+                <BaseSelect
+                  v-model="form.late_fee_type"
+                  :options="lateFeeTypeOptions"
+                  :error="allErrors.late_fee_type"
+                  placeholder="Select Late Fee Type"
+                  class="w-full"
+                />
+              </div>
+
+              <div v-if="form.late_fee_type">
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Late Fee Value
+                </label>
+                <div class="relative">
+                  <BaseInput 
+                    v-model="form.late_fee_value" 
+                    type="number" 
+                    :placeholder="form.late_fee_type === 'percentage' ? 'e.g., 5' : 'e.g., 50'" 
+                    :error="allErrors.late_fee_value"
+                    class="w-full" 
+                    min="0"
+                    :step="form.late_fee_type === 'percentage' ? '0.1' : '0.01'"
+                  />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                    {{ form.late_fee_type === 'percentage' ? '%' : '$' }}
+                  </span>
+                </div>
+              </div>
+
+              <div v-if="form.late_fee_type">
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Late Fee Cap
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+                  <BaseInput 
+                    v-model="form.late_fee_cap" 
+                    type="number" 
+                    placeholder="0.00" 
+                    :error="allErrors.late_fee_cap"
+                    class="w-full pl-8" 
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Maximum late fee amount (optional)
+                </p>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Status <span class="text-red-500">*</span>
+              </label>
+              <BaseSelect
+                  v-model="form.status"
+                  :options="statusOptions"
+                  :error="allErrors.status"
+                  placeholder="Select status"
+                  class="w-full"
+                />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Documents and Additional Info -->
+      <div class="space-y-6">
+        <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/30">
+              <Paperclip class="h-5 w-5 text-primary-600 dark:text-primary-400" />
+            </div>
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Lease Documents
+              </h4>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Upload required lease documents
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <FileUpload 
+              v-model="selectedFiles" 
+              :preview-urls="previewUrls" 
+              :document-types-options="documentTypesOptions"
+              label="Lease Documents"
+              description="Upload lease agreement and related documents (PDF, DOC, DOCX, Images)"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
+              :max-size="10" 
+              :multiple="true" 
+              :max-files="10"
+              :required="!props.lease && !hasExistingFiles" 
+              :error="allErrors.files"
+              @update:modelValue="handleFilesChange"
+              @update:document-types="handleDocumentTypesChange"
+              @remove-existing="handleRemoveExistingFile"
+              @remove-all="handleRemoveAllFiles"
+              @download="handleDownloadFile" 
+            />
+
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
+              <h5 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                Recommended Documents
+              </h5>
+              <ul class="text-sm text-blue-700 dark:text-blue-400 space-y-2">
+                <li class="flex items-center gap-2">
+                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
+                  <span>Signed Lease Agreement</span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
+                  <span>Tenant Application Form</span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
+                  <span>ID Verification</span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
+                  <span>Proof of Income</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div v-if="hasExistingFiles" class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h5 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Existing Documents
+                </h5>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ existingFiles.length }} file{{ existingFiles.length !== 1 ? 's' : '' }}
+                </span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Click the download icon to view existing files. Remove to delete them.
+              </p>
             </div>
           </div>
         </div>
 
-  
+        <!-- Additional Information -->
+        <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/30">
+              <ClipboardList class="h-5 w-5 text-primary-600 dark:text-primary-400" />
+            </div>
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Additional Information
+              </h4>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Terms, conditions, and notes
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            <!-- Terms -->
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Terms & Conditions
+              </label>
+              <textarea 
+                v-model="form.terms" 
+                rows="4"
+                placeholder="Enter lease terms and conditions..."
+                :error="allErrors.terms"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
+              ></textarea>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Optional: Special terms or conditions for this lease
+              </p>
+            </div>
+
+            <!-- Notes -->
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Notes
+              </label>
+              <textarea 
+                v-model="form.notes" 
+                rows="3"
+                placeholder="Enter any additional notes..."
+                :error="allErrors.notes"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
+              ></textarea>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Internal notes about this lease (not shown to tenant)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
         <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
           <BaseButton 
             type="button" 
@@ -520,7 +800,7 @@ onMounted(() => {
             :disabled="form.processing"
             class="bg-blue-600 text-white hover:bg-blue-700"
           >
-            {{ props.tenant ? 'Update Tenant' : 'Create Tenant' }}
+            {{ props.lease ? 'Update Lease' : 'Create Lease' }}
           </BaseButton>
         </div>
       </div>

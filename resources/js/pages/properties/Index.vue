@@ -79,12 +79,32 @@ const columns = [
     { key: 'status', label: 'Status' },
 ]
 
-const statusOptions = [
-    { label: 'All Status', value: null },
-    { label: 'Active', value: 'active' },
-    { label: 'Archived', value: 'archived' },
-    { label: 'Draft', value: 'draft' },
-]
+const statusOptions = computed(() =>
+    (props.statuses ?? []).map(status => {
+        const s = status as { key: string; label: string }
+        return {
+            value: s.key,
+            label: s.label
+        }
+    })
+)
+
+const statusMap = {
+    for_sale: { label: 'For Sale', classes: 'bg-blue-100 text-blue-800' },
+    for_rent: { label: 'For Rent', classes: 'bg-green-100 text-green-800' },
+    sold: { label: 'Sold', classes: 'bg-gray-100 text-gray-800' },
+    rented: { label: 'Rented', classes: 'bg-yellow-100 text-yellow-800' },
+    // fallback
+    default: { label: 'Unknown', classes: 'bg-gray-200 text-gray-700' },
+}
+
+const getStatusLabel = (status: string | undefined) => {
+    return statusMap[status as keyof typeof statusMap]?.label ?? statusMap.default.label
+}
+
+const getStatusClasses = (status: string | undefined) => {
+    return statusMap[status as keyof typeof statusMap]?.classes ?? statusMap.default.classes
+}
 
 const sortOptions = [
     { label: 'Name (A–Z)', value: 'name_asc' },
@@ -104,10 +124,10 @@ const handlePageChange = (url: string | null) => {
     })
 }
 
-const handleSearch = () => {}
-const handleFilter = () => {}
-const handleSort = () => {}
-const handleReset = () => {}
+const handleSearch = () => { }
+const handleFilter = () => { }
+const handleSort = () => { }
+const handleReset = () => { }
 </script>
 
 <template>
@@ -117,7 +137,8 @@ const handleReset = () => {}
             <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div class="space-y-2">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-emerald-500">
+                        <div
+                            class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-emerald-500">
                             <Building2 class="size-5 text-white" />
                         </div>
                         <div>
@@ -125,7 +146,7 @@ const handleReset = () => {}
                                 Property management
                             </h1>
                             <p class="text-gray-600 dark:text-gray-400">
-                               A centralized system to organize and manage your properties.
+                                A centralized system to organize and manage your properties.
                             </p>
                         </div>
                     </div>
@@ -133,10 +154,8 @@ const handleReset = () => {}
                         <Badge variant="outline" class="text-xs">
                             {{ paginationLinks.total }} properties total
                         </Badge>
-                        <Badge
-                            variant="outline"
-                            class="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                        >
+                        <Badge variant="outline"
+                            class="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                             {{ filteredproperties.length }} displayed
                         </Badge>
                     </div>
@@ -151,61 +170,42 @@ const handleReset = () => {}
             </div>
 
             <!-- Search -->
-            <SearchFilter
-                ref="searchFilterRef"
-                search-placeholder="Search properties..."
-                :status-options="statusOptions"
-                :sort-options="sortOptions"
-                :show-sort-dropdown="true"
-                @search="handleSearch"
-                @filter="handleFilter"
-                @sort="handleSort"
-                @reset="handleReset"
-            />
+            <SearchFilter ref="searchFilterRef" search-placeholder="Search properties..."
+                :status-options="statusOptions" :sort-options="sortOptions" :show-sort-dropdown="true"
+                @search="handleSearch" @filter="handleFilter" @sort="handleSort" @reset="handleReset" />
 
             <!-- Data Table -->
             <DataTable :columns="columns" :data="filteredproperties">
                 <template #row-actions="{ item }">
                     <Actions :item="item" :statuses="props.statuses ?? []" />
                 </template>
-                 
+
                 <template #cell-color="{ item }">
                     <div class="flex items-center gap-2">
-                        <span
-                            class="w-4 h-4 rounded-full border"
-                            :style="{ backgroundColor: item.color }"
-                        ></span>
+                        <span class="w-4 h-4 rounded-full border" :style="{ backgroundColor: item.color }"></span>
                         <span class="text-sm">{{ item.color }}</span>
                     </div>
                 </template>
 
                 <template #cell-is_featured="{ item }">
-                    <span
-                        class="px-2 py-1 rounded text-xs"
-                        :class="item.is_featured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-                    >
+                    <span class="px-2 py-1 rounded text-xs"
+                        :class="item.is_featured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
                         {{ item.is_featured ? 'Featured' : 'Not Featured' }}
                     </span>
                 </template>
 
-                <template #cell-is_active="{ item }">
-                    <span
-                        class="px-2 py-1 rounded text-xs"
-                        :class="item.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-                    >
-                        {{ item.is_active ? 'Active' : 'Inactive' }}
+                <template #cell-status="{ item }">
+                    <span class="px-2 py-1 rounded text-xs font-medium" :class="getStatusClasses(item.status)">
+                        {{ getStatusLabel(item.status) }}
                     </span>
                 </template>
-                
+
                 <template #cell-created_at="{ item }">
                     {{ new Date(item.created_at).toLocaleDateString() }}
                 </template>
             </DataTable>
 
-            <Pagination
-                :meta="paginationLinks"
-                @page-change="handlePageChange"
-            />
+            <Pagination :meta="paginationLinks" @page-change="handlePageChange" />
         </div>
     </AppLayout>
 </template>

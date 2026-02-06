@@ -6,6 +6,12 @@ import { FileText, ArrowLeft } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 
+const props = defineProps<{
+  statuses?: any
+  late_fee_types?: any
+  document_types?: any
+}>()
+
 import Form from './partials/Form.vue'
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -49,9 +55,9 @@ const handleCancel = () => {
         </div>
       </div>
       
-      <div class="mx-auto max-w-2xl">
+      <div class="mx-auto max-w-7xl">
         <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <Form/>
+          <Form :statuses="props.statuses" :late_fee_types="props.late_fee_types" :document_types="props.document_types"/>
         </div>
       </div>
     </div>

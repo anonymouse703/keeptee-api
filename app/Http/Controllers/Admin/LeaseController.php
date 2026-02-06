@@ -2,19 +2,23 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\Lease\DocumentType;
 use Exception;
 use Inertia\Inertia;
 use App\Models\Lease;
+use App\Enums\Lease\Status;
 use Illuminate\Http\Request;
+use App\Enums\Lease\LateFeeType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\LeaseResource;
 use App\Http\Requests\Admin\Lease\StoreRequest;
 use App\Http\Requests\Admin\Lease\UpdateRequest;
 use App\Repositories\Contracts\LeaseRepositoryInterface;
+use App\Services\Lease\LeaseService;
 
 class LeaseController extends Controller
 {
-    public function __construct(protected LeaseRepositoryInterface $leaseRepository)
+    public function __construct(protected LeaseRepositoryInterface $leaseRepository,  protected LeaseService $leaseService)
     {}
 
     public function index()
@@ -30,28 +34,32 @@ class LeaseController extends Controller
 
     public function create()
     {
-        return Inertia::render('leases/Create');
+        return Inertia::render('leases/Create',[
+            'statuses' => Status::collection(),
+            'late_fee_types' => LateFeeType::collection(),
+            'document_types' => DocumentType::collection()
+        ]);
     }
 
     public function store(StoreRequest $request)
-    {
-        $payload = $request->validated();
-
-        $lease = new Lease();
-        $lease->forceFill($payload);
-
+    {   
         try {
-            $this->leaseRepository->save($lease);
-        } catch (Exception $exception) {
-            report($exception);
-        }
+            $this->leaseService->create($request->all());
 
-        return redirect()
-            ->route('leases.index')
-            ->with('flash', [
-                'type' => 'success',
-                'message' => __('Lease successfully created.'),
-            ]);
+            return redirect()
+                ->route('leases.index')
+                ->with('flash', [
+                    'type' => 'success',
+                    'message' => __('Lease successfully created.'),
+                ]);
+
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()
+                ->withInput()
+                ->withErrors(__('Failed to create lease: ' . $exception->getMessage()));
+        }
     }
 
     public function edit(Lease $lease)

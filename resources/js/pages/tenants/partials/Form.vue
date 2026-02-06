@@ -239,7 +239,7 @@ onMounted(() => {
               label="Tenant Documents"
               description="Upload tenant agreement and related documents (PDF, DOC, DOCX, Images)"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
-              :max-size="1" 
+              :max-size="2" 
               :multiple="true" 
               :max-files="10"
               :required="!props.tenant && !hasExistingFiles" 
@@ -257,25 +257,13 @@ onMounted(() => {
                 Required Documents Checklist
               </h5>
               <ul class="text-sm text-blue-700 dark:text-blue-400 space-y-2">
-                <li class="flex items-center gap-2">
+                <li
+                  v-for="doc in props.document_types"
+                  :key="doc.value"
+                  class="flex items-center gap-2"
+                >
                   <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Valid ID (Passport, Driver's License)</span>
-                </li>
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Signed Rental Agreement</span>
-                </li>
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Proof of Income (Last 3 months)</span>
-                </li>
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Security Deposit Receipt</span>
-                </li>
-                <li class="flex items-center gap-2">
-                  <div class="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Emergency Contact Information</span>
+                  <span>{{ doc.label }}</span>
                 </li>
               </ul>
             </div>

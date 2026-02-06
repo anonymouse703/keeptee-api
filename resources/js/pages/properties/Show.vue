@@ -17,6 +17,8 @@ const props = defineProps<{
   property: any
 }>()
 
+console.log(props.property)
+
 const property = computed(() => props.property.data)
 const activeImageIndex = ref(0)
 const isLoaded = ref(false)
@@ -30,7 +32,7 @@ onMounted(() => {
 const propertyImages = computed(() => {
   if (!property.value.images?.length) return []
   return [...(property.value.images )]
-    .sort((a, b) => a.sort_order - b.sort_order)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 })
 
 const activeImage = computed(() => {
@@ -152,7 +154,7 @@ const fullAddress = computed(
             <div class="aspect-video overflow-hidden">
               <img
                 v-if="activeImage"
-                :src="activeImage.image_url"
+                :src="activeImage.url"
                 :alt="property.title"
                 class="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
               />
@@ -178,10 +180,12 @@ const fullAddress = computed(
             >
               <div class="relative overflow-hidden rounded-xl">
                 <img
-                  :src="img.thumbnail_url ?? img.image_url"
+                  :src="img.url"
                   :alt="`${property.title} - Image ${index + 1}`"
                   class="w-24 h-24 object-cover transition-all duration-300 group-hover:scale-110"
-                  :class="index === activeImageIndex ? 'ring-3 ring-primary ring-offset-2' : 'opacity-80 group-hover:opacity-100'"
+                  :class="index === activeImageIndex
+                    ? 'ring-3 ring-primary ring-offset-2'
+                    : 'opacity-80 group-hover:opacity-100'"
                 />
                 <div 
                   v-if="index === activeImageIndex"

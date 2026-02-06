@@ -22,9 +22,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'ended', 'terminated']);
             $table->text('terms')->nullable();
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('file_id')->nullable();
 
-            // ⚡ Late-fee rules
             $table->tinyInteger('rent_due_day')->default(1); // 1–31
             $table->tinyInteger('grace_period_days')->default(0);
             $table->enum('late_fee_type', ['fixed','daily','percentage'])->nullable();

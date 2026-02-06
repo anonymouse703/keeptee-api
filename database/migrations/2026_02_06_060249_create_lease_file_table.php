@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('tenant_files', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
+        Schema::create('lease_files', function (Blueprint $table) {
+            $table->foreignId('lease_id')->constrained()->onDelete('cascade');
             $table->foreignId('file_id')->constrained()->onDelete('cascade');
             $table->string('document_type')->nullable(); 
 
-            $table->primary(['tenant_id', 'file_id']);
+            $table->primary(['lease_id', 'file_id']);
         });
     }
 
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('tenant_files');
+        Schema::dropIfExists('lease_files');
     }
 };

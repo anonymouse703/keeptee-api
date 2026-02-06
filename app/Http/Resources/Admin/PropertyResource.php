@@ -32,38 +32,13 @@ class PropertyResource extends JsonResource
 
             // RELATIONSHIPS
             'owner' => new UserResource($this->whenLoaded('owner')),
-
-            // IMAGES (pivot-aware)
-            'images' => $this->whenLoaded('images', function () {
-                return $this->images->map(function ($image) {
-                    return [
-                        'id' => $image->id,
-                        'file_id' => $image->id, 
-                        'path' => $image->path,
-                        'url' => asset('storage/' . $image->path),
-                        'thumbnail_url' => $image->thumbnail_path 
-                            ? asset('storage/' . $image->thumbnail_path) 
-                            : null,
-                        'name' => $image->name,
-                        'size' => $image->size,
-                        'type' => $image->type,
-                        
-                        'is_primary' => $image->pivot->is_primary ?? false,
-                        'sort_order' => $image->pivot->sort_order ?? 0,
-                        'image_type' => $image->pivot->image_type ?? 'exterior',
-                    ];
-                });
-            }),
-
-            // AMENITIES
+            'images' => FileResource::collection($this->whenLoaded('images')),  
             'amenities' => $this->whenLoaded('amenities', function () {
                 return $this->amenities->map(fn ($amenity) => [
                     'id'   => $amenity->id,
                     'name' => $amenity->name,
                 ]);
             }),
-
-            // TAGS
             'tags' => $this->whenLoaded('tags', function () {
                 return $this->tags->map(fn ($tag) => [
                     'id'   => $tag->id,

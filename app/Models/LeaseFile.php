@@ -2,19 +2,20 @@
 
 namespace App\Models;
 
-use App\Enums\Tenant\DocumentType;
+use App\Enums\Lease\DocumentType;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class TenantFile extends Pivot
+class LeaseFile extends Pivot
 {
-    protected $table = 'tenant_files';
+    protected $table = 'lease_files';
 
     public $incrementing = false;
 
     public $timestamps = false;
 
     protected $fillable = [
-        'tenant_id',
+        'lease_id',
         'file_id',
         'document_type',
     ];
@@ -23,12 +24,12 @@ class TenantFile extends Pivot
         'document_type' => DocumentType::class, 
     ];
 
-    public function tenant()
+    public function lease(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Lease::class);
     }
 
-    public function file()
+    public function file(): BelongsTo  
     {
         return $this->belongsTo(File::class);
     }

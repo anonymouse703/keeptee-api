@@ -4,25 +4,20 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\Tenant\DocumentType;
 use Exception;
-use App\Models\File;
 use Inertia\Inertia;
 use App\Models\Tenant;
 use App\Models\Property;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
 use App\Services\Tenant\TenantService;
-use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\Admin\TenantResource;
 use App\Http\Requests\Admin\Tenant\StoreRequest;
 use App\Http\Requests\Admin\Tenant\UpdateRequest;
-use App\Repositories\Contracts\FileRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
-use App\Services\FileUploader\Uploaders\TenantFilesUploader;
 
 class TenantController extends Controller
 {
-    public function __construct(protected TenantRepositoryInterface $tenantRepository, protected FileRepositoryInterface $fileRepository, protected TenantService $tenantService)
+    public function __construct(protected TenantRepositoryInterface $tenantRepository, protected TenantService $tenantService)
     {}
 
     public function index()
@@ -68,13 +63,12 @@ class TenantController extends Controller
 
     public function show(Tenant $tenant)
     {
-        $tenant->load(['property', 'files']);
-        
+        $tenant->load(['files']);
         return Inertia::render('tenants/Show', [
             'tenant' => new TenantResource($tenant),
         ]);
     }
-
+    
     public function edit(Tenant $tenant)
     {
         $tenant->load(['property', 'files']);

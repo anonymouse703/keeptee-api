@@ -1,26 +1,25 @@
 <?php
 
-namespace App\Services\TenantFile;
+namespace App\Services\LeaseFile;
 
 use App\Models\File;
-use App\Models\Tenant;
-use App\Models\TenantFile;
+use App\Models\Lease;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use App\Services\FileUploader\Uploaders\TenantFilesUploader;
+use App\Services\FileUploader\Uploaders\LeaseFilesUploader;
 
-class TenantFileService
+class LeaseFileService
 {   
     /**
-     * Store tenant files using pivot table approach
+     * Store lease files using pivot table approach
      * 
-     * @param Tenant $tenant
+     * @param Lease $lease
      * @param array $files Array of UploadedFile objects
      * @param array $documentTypes Array of document types corresponding to each file
      */
-    public function store(Tenant $tenant, array $files, array $documentTypes = []): void
+    public function store(Lease $lease, array $files, array $documentTypes = []): void
     {
         ksort($files);
         ksort($documentTypes);
@@ -28,12 +27,12 @@ class TenantFileService
         $pivotData = [];
         $uploadedCount = 0;
         $failedCount = 0;
+        $failedFiles = [];
 
         foreach ($files as $index => $uploadedFile) {
             try {
-
                 // Upload file and get file ID
-                $fileId = TenantFilesUploader::uploadFile($uploadedFile, Auth::user());
+                $fileId = LeaseFilesUploader::uploadFile($uploadedFile, Auth::user());
 
                 if (!$fileId) {
                     throw new \Exception('File upload returned null file ID');
@@ -42,7 +41,7 @@ class TenantFileService
                 // Get document type for this file
                 $documentType = $documentTypes[$index] ?? 'other';
 
-                // Prepare pivot data for tenant_files table
+                // Prepare pivot data for lease_files table
                 $pivotData[$fileId] = [
                     'document_type' => $documentType,
                 ];
@@ -51,36 +50,43 @@ class TenantFileService
 
             } catch (\Exception $e) {
                 $failedCount++;
+                $failedFiles[] = $uploadedFile->getClientOriginalName();
             }
         }
 
-        // Attach files to tenant via tenant_files pivot table
+        // Attach files to lease via lease_files pivot table
         if (!empty($pivotData)) {
             try {
-                $tenant->files()->attach($pivotData);
+                $lease->files()->attach($pivotData);
             } catch (\Exception $e) {
                 throw $e;
             }
-        } else {
-            if ($failedCount > 0 && $uploadedCount === 0) {
-                throw new \Exception("All file uploads failed. Check logs for details.");
-            }
+        }
+
+        if ($failedCount > 0 && $uploadedCount === 0) {
+            throw new \Exception("All file uploads failed. Check logs for details.");
+        }
+
+        if ($failedCount > 0) {
+            Log::warning('Some files failed to upload', [
+                'lease_id' => $lease->id,
+                'failed_files' => $failedFiles,
+            ]);
         }
     }
     
     /**
-     * Update tenant files
+     * Update lease files
      */
     public function update(
-        Tenant $tenant,
+        Lease $lease,
         array $newFiles = [],
         array $deleteFileIds = [],
         array $documentTypes = []
     ): void {
-
         // Delete specified files first
         if (!empty($deleteFileIds)) {
-            $this->deleteFiles($tenant, $deleteFileIds);
+            $this->deleteFiles($lease, $deleteFileIds);
         }
 
         // Upload new files
@@ -89,11 +95,16 @@ class TenantFileService
             ksort($documentTypes);
             
             $pivotData = [];
+            $uploadedCount = 0;
+            $failedCount = 0;
 
             foreach ($newFiles as $index => $uploadedFile) {
                 try {
+                    $fileId = LeaseFilesUploader::uploadFile($uploadedFile, Auth::user());
 
-                    $fileId = TenantFilesUploader::uploadFile($uploadedFile, Auth::user());
+                    if (!$fileId) {
+                        throw new \Exception('File upload returned null file ID');
+                    }
 
                     $documentType = $documentTypes[$index] ?? 'other';
 
@@ -101,40 +112,37 @@ class TenantFileService
                         'document_type' => $documentType,
                     ];
 
+                    $uploadedCount++;
+
                 } catch (\Exception $e) {
-                    Log::error('Failed to upload tenant file during update', [
-                        'tenant_id' => $tenant->id,
-                        'index' => $index,
-                        'error' => $e->getMessage(),
-                    ]);
+                    $failedCount++;
                 }
             }
 
-            if (!empty($pivotData)) {
-                $tenant->files()->attach($pivotData);
+            if ($failedCount > 0 && $uploadedCount === 0) {
+                throw new \Exception("All file uploads failed during update. Check logs for details.");
             }
         }
     }
     
     /**
-     * Delete files from tenant
+     * Delete files from lease
      */
-    protected function deleteFiles(Tenant $tenant, array $fileIds): void
+    protected function deleteFiles(Lease $lease, array $fileIds): void
     {
-        // Detach from pivot table
-        $tenant->files()->detach($fileIds);
+        if (empty($fileIds)) {
+            return;
+        }
 
-        // Delete physical files and File records if not used elsewhere
-        foreach ($fileIds as $fileId) {
-            $file = File::find($fileId);
+        try {
+            // Detach from pivot table
+            $lease->files()->detach($fileIds);
 
-            if ($file) {
-                // Check if file is still used by other tenants
-                $stillInUse = TenantFile::where('file_id', $fileId)
-                    ->where('tenant_id', '!=', $tenant->id)
-                    ->exists();
+            // Delete physical files and File records
+            foreach ($fileIds as $fileId) {
+                $file = File::find($fileId);
 
-                if (!$stillInUse) {
+                if ($file) {
                     // Delete physical file
                     if ($file->path && Storage::disk($file->disk)->exists($file->path)) {
                         Storage::disk($file->disk)->delete($file->path);
@@ -147,42 +155,46 @@ class TenantFileService
 
                     // Delete File record
                     $file->delete();
-
                 } else {
-                    Log::info('File still in use by other tenants', [
-                        'file_id' => $fileId
+                    Log::warning('File not found for deletion', [
+                        'file_id' => $fileId,
+                        'lease_id' => $lease->id,
                     ]);
                 }
-            } else {
-                Log::warning('File not found for deletion', [
-                    'file_id' => $fileId,
-                ]);
             }
+        } catch (\Exception $e) {
+            throw $e;
         }
     }
     
     /**
-     * Public API for deleting files for a specific tenant
+     * Public API for deleting files for a specific lease
      */
-    public function deleteForTenant(Tenant $tenant, array $fileIds): void
+    public function deleteForLease(Lease $lease, array $fileIds): void
     {
-        $this->deleteFiles($tenant, $fileIds);
+        $this->deleteFiles($lease, $fileIds);
     }
     
     /**
      * Update document type for a file
      */
-    public function updateDocumentType(Tenant $tenant, int $fileId, string $documentType): void
+    public function updateDocumentType(Lease $lease, int $fileId, string $documentType): void
     {
-        $tenant->files()->updateExistingPivot($fileId, ['document_type' => $documentType]);
+        try {
+            $lease->files()->updateExistingPivot($fileId, [
+                'document_type' => $documentType
+            ]);
+        } catch (\Exception $e) {
+            throw $e;
+        }
     }
     
     /**
      * Get files by document type
      */
-    public function getFilesByType(Tenant $tenant, string $documentType)
+    public function getFilesByType(Lease $lease, string $documentType)
     {
-        return $tenant->files()
+        return $lease->files()
             ->wherePivot('document_type', $documentType)
             ->get();
     }

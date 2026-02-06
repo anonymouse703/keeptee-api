@@ -4,8 +4,9 @@ namespace App\Models;
 
 use App\Enums\Lease\Status;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Lease extends Model
 {
@@ -52,5 +53,13 @@ class Lease extends Model
     public function rentPayments(): HasMany
     {
         return $this->hasMany(RentPayment::class);
+    }
+
+    
+    public function files() : BelongsToMany
+    {
+        return $this->belongsToMany(File::class, 'lease_files')
+                    ->using(LeaseFile::class) 
+                    ->withPivot('document_type');
     }
 }

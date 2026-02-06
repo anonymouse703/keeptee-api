@@ -74,7 +74,7 @@ class PropertyController extends Controller
 
     public function show(Property $property)
     {
-        $property->load(['propertyImages', 'owner']);
+        $property->load(['images', 'owner']);
 
         return Inertia::render('properties/Show', [
             'property' => new PropertyResource($property),

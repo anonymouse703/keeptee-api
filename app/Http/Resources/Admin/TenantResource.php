@@ -27,7 +27,7 @@ class TenantResource extends JsonResource
 
             // RELATIONSHIPS
             'property' => new PropertyResource($this->whenLoaded('property')),
-            'file' => FileResource::collection($this->whenLoaded('file')),
+            'files' => FileResource::collection($this->whenLoaded('files')),
         ];
     }
 }

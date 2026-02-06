@@ -1,137 +1,110 @@
 <?php
 
-namespace App\Services\Tenant;
+namespace App\Services\Lease;
 
-use App\Models\Tenant;
-use App\Models\Property;
-use App\Enums\Property\Status;
+use App\Models\Lease;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Repositories\TenantRepository;
-use App\Services\TenantFile\TenantFileService;
+use App\Services\LeaseFile\LeaseFileService;
+use App\Repositories\Contracts\LeaseRepositoryInterface;
 
-class TenantService
+class LeaseService
 {
     public function __construct(
-        protected TenantRepository $tenantRepository,
-        protected TenantFileService $fileService
+        protected LeaseRepositoryInterface $leaseRepository,
+        protected LeaseFileService $fileService
     ) {}
 
     /**
-     * Create a new tenant with files
+     * Create a new lease with files
      */
-    public function create(array $data): Tenant
+    public function create(array $data): Lease
     {
         DB::beginTransaction();
 
         try {
             // 1. Extract and organize data
-            $tenantData = $this->extractTenantData($data);
+            $leaseData = $this->extractLeaseData($data);
             $files = $this->extractFiles($data);
             $documentTypes = $this->extractDocumentTypes($data);
 
-            // 2. Create the tenant
-            $tenant = new Tenant();
-            $tenant->fill($tenantData);
-            $this->tenantRepository->save($tenant);
+            // 2. Create the lease
+            $lease = new Lease();
+            $lease->fill($leaseData);
+            $this->leaseRepository->save($lease);
 
             // 3. Attach files
             if (!empty($files)) {
-                $this->fileService->store($tenant, $files, $documentTypes);
-            }
-
-            // 4. Update property status
-            if (!empty($tenantData['property_id'])) {
-                $this->updatePropertyStatus($tenantData['property_id'], Status::Rented);
+                $this->fileService->store($lease, $files, $documentTypes);
             }
 
             DB::commit();
 
-            return $tenant;
+            return $lease->fresh(['files']);
 
         } catch (\Exception $e) {
             DB::rollBack();
-
             throw $e;
         }
     }
 
     /**
-     * Update an existing tenant
+     * Update an existing lease
      */
-    public function update(Tenant $tenant, array $data): Tenant
+    public function update(Lease $lease, array $data): Lease
     {
         DB::beginTransaction();
 
         try {
-            $oldPropertyId = $tenant->property_id;
-            
-            // 1. Update tenant data
-            $tenantData = $this->extractTenantData($data);
-            $tenant->fill($tenantData);
-            $this->tenantRepository->save($tenant);
+            // 1. Update lease data
+            $leaseData = $this->extractLeaseData($data);
+            $lease->fill($leaseData);
+            $this->leaseRepository->save($lease);
 
             // 2. Handle file updates
             if (isset($data['files']) || isset($data['delete_files'])) {
-                $this->handleFileUpdates($tenant, $data);
-            }
-
-            // 3. Handle property status changes
-            $newPropertyId = $tenantData['property_id'] ?? null;
-            if ($oldPropertyId != $newPropertyId) {
-                if ($oldPropertyId) {
-                    $this->updatePropertyStatus($oldPropertyId, Status::ForRent);
-                }
-                if ($newPropertyId) {
-                    $this->updatePropertyStatus($newPropertyId, Status::Rented);
-                }
+                $this->handleFileUpdates($lease, $data);
             }
 
             DB::commit();
 
-            return $tenant->fresh(['files']);
+            return $lease->fresh(['files']);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
             throw $e;
         }
     }
 
     /**
-     * Delete a tenant
+     * Delete a lease
      */
-    public function delete(Tenant $tenant): bool
+    public function delete(Lease $lease): bool
     {
-        return DB::transaction(function () use ($tenant) {
-            $propertyId = $tenant->property_id;
-            
-            // Delete all tenant files
-            $fileIds = $tenant->files()->pluck('files.id')->toArray();
+        return DB::transaction(function () use ($lease) {
+            // Delete all lease files
+            $fileIds = $lease->files()->pluck('files.id')->toArray();
             if (!empty($fileIds)) {
-                $this->fileService->deleteForTenant($tenant, $fileIds);
+                $this->fileService->deleteForLease($lease, $fileIds);
             }
             
-            $deleted = $tenant->delete();
-        
-            if ($deleted && $propertyId) {
-                $this->updatePropertyStatus($propertyId, Status::ForRent);
-            }
-            
+            // Delete the lease
+            $deleted = $lease->delete();
+
             return $deleted;
         });
     }
 
     /**
-     * Extract tenant-specific data (exclude file-related fields)
+     * Extract lease-specific data (exclude file-related fields)
      */
-    protected function extractTenantData(array $data): array
+    protected function extractLeaseData(array $data): array
     {
         return collect($data)
             ->except(array_filter(array_keys($data), function($key) {
                 return str_starts_with($key, 'files') 
                     || str_starts_with($key, 'file_document_types')
-                    || in_array($key, ['delete_files', '_method']);
+                    || in_array($key, ['delete_files', '_method', '_token']);
             }))
             ->toArray();
     }
@@ -205,7 +178,7 @@ class TenantService
     /**
      * Handle file updates
      */
-    protected function handleFileUpdates(Tenant $tenant, array $data): void
+    protected function handleFileUpdates(Lease $lease, array $data): void
     {
         // Delete files - Frontend sends URLs, we need to convert to file IDs
         if (!empty($data['delete_files'])) {
@@ -214,10 +187,6 @@ class TenantService
             // Convert URLs to file IDs
             $fileIds = [];
             foreach ($deleteUrls as $url) {
-                // Extract file ID from URL or path
-                // Assuming URL format like: /storage/tenant-files/123/filename.pdf
-                // Or the URL might be the full URL like: http://domain.com/storage/...
-                
                 // Try to find file by URL/path
                 $file = \App\Models\File::where('url', $url)
                     ->orWhere(function($query) use ($url) {
@@ -237,13 +206,13 @@ class TenantService
                 } else {
                     Log::warning('Could not resolve URL to file ID', [
                         'url' => $url,
+                        'lease_id' => $lease->id,
                     ]);
                 }
             }
             
             if (!empty($fileIds)) {
-                
-                $this->fileService->deleteForTenant($tenant, $fileIds);
+                $this->fileService->deleteForLease($lease, $fileIds);
             }
         }
 
@@ -252,22 +221,12 @@ class TenantService
         $documentTypes = $this->extractDocumentTypes($data);
 
         if (!empty($newFiles)) {
-            
             $this->fileService->update(
-                $tenant,
+                $lease,
                 $newFiles,
                 [],
                 $documentTypes
             );
         }
-    }
-
-    /**
-     * Update property status
-     */
-    protected function updatePropertyStatus(int $propertyId, Status $status): void
-    {
-        Property::where('id', $propertyId)
-            ->update(['status' => $status]);
     }
 }

@@ -23,7 +23,7 @@ class Tenant extends Model
 
     public function files() : BelongsToMany
     {
-        return $this->belongsToMany(File::class, 'tenant_file')
+        return $this->belongsToMany(File::class, 'tenant_files')
                     ->using(TenantFile::class) 
                     ->withPivot('document_type');
     }
